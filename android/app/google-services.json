@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "831782100142",
+    "project_id": "petcade",
+    "storage_bucket": "petcade.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:831782100142:android:a24bb3b848ff719372613f",
+        "android_client_info": {
+          "package_name": "com.example.petcade"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBwrhqQBfiTaR2lxP03VS5MWERZ9gwHXac"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

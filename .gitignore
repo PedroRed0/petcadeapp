@@ -1,0 +1,21 @@
+# Arquivos e pastas gerados automaticamente
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+build/
+
+# Arquivos específicos de IDE
+.vscode/
+.idea/
+*.iml
+
+# Arquivos específicos do sistema operacional
+.DS_Store
+Thumbs.db
+
+# Chaves e credenciais (não versionar!)
+**/android/key.properties
+*.jks

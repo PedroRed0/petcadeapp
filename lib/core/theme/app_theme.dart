@@ -77,7 +77,7 @@ class AppTheme {
         GoogleFonts.poppinsTextTheme(
           ThemeData(brightness: Brightness.dark).textTheme,
         ).apply(
-          bodyColor: Colors.white.withOpacity(0.9),
+          bodyColor: Colors.white.withValues(alpha: 0.9),
           displayColor: Colors.white,
         ),
     appBarTheme: const AppBarTheme(

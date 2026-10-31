@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
@@ -5,10 +7,7 @@ import 'package:image_picker/image_picker.dart';
 import '../services/pet_service.dart';
 import '../models/pet.dart';
 
-import 'dart:io';
-
 import '../core/theme/app_colors.dart';
-import '../core/widgets/theme_toggle_button.dart';
 
 class CadastroPetScreen extends StatefulWidget {
   const CadastroPetScreen({super.key});
@@ -26,13 +25,21 @@ class _CadastroPetScreenState extends State<CadastroPetScreen> {
   final _recompensaController = TextEditingController();
 
   String _especie = 'Cachorro';
-  File? _foto;
+  Uint8List? _foto;
 
   Future<void> _selecionarFoto() async {
     final picker = ImagePicker();
-    final imagem = await picker.pickImage(source: ImageSource.gallery);
+    // A imagem já vem reduzida e comprimida, para caber no Firestore
+    // (cada documento aceita no máximo 1 MB).
+    final imagem = await picker.pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 800,
+      maxHeight: 800,
+      imageQuality: 60,
+    );
     if (imagem != null) {
-      setState(() => _foto = File(imagem.path));
+      final bytes = await imagem.readAsBytes();
+      setState(() => _foto = bytes);
     }
   }
 
@@ -52,21 +59,23 @@ class _CadastroPetScreenState extends State<CadastroPetScreen> {
     setState(() => _enviando = true);
 
     try {
-      final fotoUrl = await _petService.uploadFoto(_foto!);
+      final fotoBase64 = _petService.converterFoto(_foto!);
 
       final novoPet = Pet(
         nome: _nomeController.text.trim(),
         especie: _especie,
         racaCor: _racaController.text.trim(),
         descricao: _descricaoController.text.trim(),
-        fotoUrl: fotoUrl,
+        fotoBase64: fotoBase64,
         localizacao: _localizacaoController.text.trim(),
         latitude:
             -23.5610, // fixo por enquanto — depois plugamos GPS de verdade
         longitude: -46.5250,
         recompensa: _recompensaController.text.trim().isEmpty
             ? null
-            : double.tryParse(_recompensaController.text.trim()),
+            : double.tryParse(
+                _recompensaController.text.trim().replaceAll(',', '.'),
+              ),
         criadoEm: DateTime.now(),
       );
 
@@ -134,8 +143,9 @@ class _CadastroPetScreenState extends State<CadastroPetScreen> {
                       )
                     : ClipRRect(
                         borderRadius: BorderRadius.circular(18),
-                        child: Image.file(
+                        child: Image.memory(
                           _foto!,
+                          height: 160,
                           fit: BoxFit.cover,
                           width: double.infinity,
                         ),

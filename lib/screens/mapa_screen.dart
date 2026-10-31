@@ -3,9 +3,10 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart' hide Path;
 import 'package:google_fonts/google_fonts.dart';
 
-import '../core/theme/theme/app_colors.dart';
+import '../core/theme/app_colors.dart';
+import '../core/widgets/pet_foto.dart';
 import '../models/pet.dart';
-import '../core/widgets/theme_toggle_button.dart';
+import '../services/pet_service.dart';
 
 class MapaScreen extends StatefulWidget {
   const MapaScreen({super.key});
@@ -20,7 +21,14 @@ class _MapaScreenState extends State<MapaScreen> {
   // Centro aproximado de São Paulo
   static const LatLng _centroSP = LatLng(-23.5610, -46.5250);
 
-  get petsMock => null;
+  // Pets reais vindos do Firestore (criado uma vez só)
+  late final Stream<List<Pet>> _petsStream;
+
+  @override
+  void initState() {
+    super.initState();
+    _petsStream = PetService().listarPets();
+  }
 
   void _abrirDetalhesPet(Pet pet) {
     showModalBottomSheet(
@@ -54,20 +62,28 @@ class _MapaScreenState extends State<MapaScreen> {
                 urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                 userAgentPackageName: 'com.example.petcade',
               ),
-              MarkerLayer(
-                markers: petsMock
-                    .map(
-                      (pet) => Marker(
-                        point: LatLng(pet.latitude, pet.longitude),
-                        width: 44,
-                        height: 44,
-                        child: GestureDetector(
-                          onTap: () => _abrirDetalhesPet(pet),
-                          child: _PetPin(especie: pet.especie),
-                        ),
-                      ),
-                    )
-                    .toList(),
+              StreamBuilder<List<Pet>>(
+                stream: _petsStream,
+                builder: (context, snapshot) {
+                  final pets = (snapshot.data ?? [])
+                      .where((p) => p.latitude != 0 || p.longitude != 0)
+                      .toList();
+                  return MarkerLayer(
+                    markers: pets
+                        .map(
+                          (pet) => Marker(
+                            point: LatLng(pet.latitude, pet.longitude),
+                            width: 44,
+                            height: 50,
+                            child: GestureDetector(
+                              onTap: () => _abrirDetalhesPet(pet),
+                              child: _PetPin(especie: pet.especie),
+                            ),
+                          ),
+                        )
+                        .toList(),
+                  );
+                },
               ),
             ],
           ),
@@ -84,7 +100,7 @@ class _MapaScreenState extends State<MapaScreen> {
                 borderRadius: BorderRadius.circular(14),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.08),
+                    color: Colors.black.withValues(alpha: 0.08),
                     blurRadius: 12,
                     offset: const Offset(0, 4),
                   ),
@@ -147,7 +163,7 @@ class _PetPin extends StatelessWidget {
             shape: BoxShape.circle,
             border: Border.all(color: Colors.white, width: 2),
             boxShadow: [
-              BoxShadow(color: Colors.black.withOpacity(0.25), blurRadius: 6),
+              BoxShadow(color: Colors.black.withValues(alpha: 0.25), blurRadius: 6),
             ],
           ),
           child: Icon(
@@ -220,18 +236,7 @@ class _PetPreviewSheet extends StatelessWidget {
         children: [
           ClipRRect(
             borderRadius: BorderRadius.circular(14),
-            child: Image.network(
-              pet.fotoUrl,
-              width: 70,
-              height: 70,
-              fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => Container(
-                width: 70,
-                height: 70,
-                color: AppColors.laranjaClaro.withOpacity(0.4),
-                child: const Icon(Icons.pets_rounded, color: AppColors.laranja),
-              ),
-            ),
+            child: PetFoto(pet: pet, width: 70, height: 70),
           ),
           const SizedBox(width: 14),
           Expanded(

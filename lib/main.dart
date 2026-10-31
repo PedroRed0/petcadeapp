@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 
 import 'firebase_options.dart';
-import 'core/theme/theme/app_theme.dart';
+import 'core/theme/app_theme.dart';
 import 'core/theme/theme_controller.dart';
 import 'screens/home_screen.dart';
 

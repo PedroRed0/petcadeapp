@@ -53,7 +53,7 @@ class _MapaScreenState extends State<MapaScreen> {
   }
 
   void _abrirPreview(Pet pet) {
-    showModalBottomSheet(
+    abrirJanela(
       context: context,
       showDragHandle: false,
       backgroundColor: Colors.transparent,

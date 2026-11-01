@@ -272,3 +272,21 @@ void mostrarAviso(BuildContext context, String texto) {
     ..hideCurrentSnackBar()
     ..showSnackBar(SnackBar(content: Text(texto)));
 }
+
+/// Abre uma janela que sobe de baixo (bottom sheet) sem ficar atrás
+/// da barra de navegação do Android (◁ ○ ▢) nem do "notch".
+Future<T?> abrirJanela<T>({
+  required BuildContext context,
+  required WidgetBuilder builder,
+  bool showDragHandle = true,
+  Color? backgroundColor,
+}) {
+  return showModalBottomSheet<T>(
+    context: context,
+    isScrollControlled: true,
+    useSafeArea: true,
+    showDragHandle: showDragHandle,
+    backgroundColor: backgroundColor,
+    builder: (context) => SafeArea(top: false, child: builder(context)),
+  );
+}

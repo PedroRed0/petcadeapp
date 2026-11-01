@@ -56,9 +56,8 @@ class _BuscarScreenState extends State<BuscarScreen> {
     required String atual,
     required ValueChanged<String> onEscolher,
   }) async {
-    final escolha = await showModalBottomSheet<String>(
+    final escolha = await abrirJanela<String>(
       context: context,
-      isScrollControlled: true,
       builder: (_) => _ListaOpcoes(titulo: titulo, opcoes: opcoes, atual: atual),
     );
     if (escolha != null) onEscolher(escolha == 'Todos' ? '' : escolha);
@@ -66,9 +65,8 @@ class _BuscarScreenState extends State<BuscarScreen> {
 
   Future<void> _escolherRegiao() async {
     final controller = TextEditingController(text: _filtro.regiao);
-    final regiao = await showModalBottomSheet<String>(
+    final regiao = await abrirJanela<String>(
       context: context,
-      isScrollControlled: true,
       builder: (context) => Padding(
         padding: EdgeInsets.fromLTRB(
           20,

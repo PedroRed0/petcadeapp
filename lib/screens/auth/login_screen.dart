@@ -100,7 +100,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      const Center(child: LogoPetcade(tamanho: 84)),
+                      const Center(child: LogoPetcade(tamanho: 100)),
                       const SizedBox(height: 12),
                       Text(
                         'Juntos por eles',

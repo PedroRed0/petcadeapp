@@ -28,7 +28,7 @@ class _MeusAnunciosScreenState extends State<MeusAnunciosScreen> {
   }
 
   Future<void> _opcoes(Pet pet) async {
-    final acao = await showModalBottomSheet<String>(
+    final acao = await abrirJanela<String>(
       context: context,
       builder: (context) => SafeArea(
         child: Column(

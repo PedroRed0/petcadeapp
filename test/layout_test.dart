@@ -12,6 +12,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:petcade/core/theme/app_theme.dart';
 import 'package:petcade/models/pet.dart';
 import 'package:petcade/screens/animais_perdidos_screen.dart';
+import 'package:petcade/screens/buscar_screen.dart';
 import 'package:petcade/screens/auth/criar_conta_screen.dart';
 import 'package:petcade/screens/auth/login_screen.dart';
 import 'package:petcade/screens/cadastro_pet_screen.dart';
@@ -280,5 +281,42 @@ void main() {
         expect(find.text('Usar minha localização atual'), findsOneWidget);
       });
     }
+  }
+
+  // Erro enviado pelo Pedro: a janela "Ordenar por" ficava atrás da
+  // barra de navegação do Android (◁ ○ ▢).
+  for (final MapEntry(key: nomeTam, value: tamanho) in _tamanhos.entries) {
+    testWidgets('Janelas não ficam atrás da barra do Android ($nomeTam)', (
+      t,
+    ) async {
+      await _prepararFirebase();
+      const barra = 48.0;
+      t.view.padding = const FakeViewPadding(bottom: barra);
+      t.view.viewPadding = const FakeViewPadding(bottom: barra);
+      await _abrir(t, const BuscarScreen(), tamanho, 1.3);
+      for (final (linha, ultimaOpcao) in [
+        ('Ordenar por', 'Mais próximos'),
+        ('Sexo', 'Fêmea'),
+        ('Porte', 'Grande'),
+      ]) {
+        await t.scrollUntilVisible(
+          find.text(linha),
+          100,
+          scrollable: find.byType(Scrollable).first,
+        );
+        await t.ensureVisible(find.text(linha));
+        await _esperar(t);
+        await t.tap(find.text(linha));
+        await _esperar(t);
+        final fim = t.getRect(find.text(ultimaOpcao).last).bottom;
+        expect(
+          fim,
+          lessThanOrEqualTo(tamanho.height - barra),
+          reason: '"$ultimaOpcao" ficou atrás da barra do sistema',
+        );
+        Navigator.of(t.element(find.text(ultimaOpcao).last)).pop();
+        await _esperar(t);
+      }
+    });
   }
 }

@@ -63,7 +63,7 @@ Future<void> trocarFotoPerfil(BuildContext context, Usuario? usuario) async {
       (usuario?.foto.isNotEmpty ?? false) ||
       (usuario?.fotoUrl.isNotEmpty ?? false);
 
-  final escolha = await showModalBottomSheet<String>(
+  final escolha = await abrirJanela<String>(
     context: context,
     builder: (context) => SafeArea(
       child: Column(

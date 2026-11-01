@@ -70,9 +70,8 @@ class _DetalhesPetScreenState extends State<DetalhesPetScreen> {
   }
 
   Future<void> _informarAvistamento(Pet pet) async {
-    final enviado = await showModalBottomSheet<bool>(
+    final enviado = await abrirJanela<bool>(
       context: context,
-      isScrollControlled: true,
       builder: (_) => _FormAvistamento(pet: pet),
     );
     if (enviado == true && mounted) {

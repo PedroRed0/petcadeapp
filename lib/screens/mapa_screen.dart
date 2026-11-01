@@ -1,140 +1,195 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
-import 'package:latlong2/latlong.dart' hide Path;
 import 'package:google_fonts/google_fonts.dart';
+import 'package:latlong2/latlong.dart' hide Path;
 
 import '../core/theme/app_colors.dart';
+import '../core/utils/formatos.dart';
+import '../core/widgets/comuns.dart';
 import '../core/widgets/pet_foto.dart';
+import '../core/widgets/selo_status.dart';
+import '../models/filtro_pets.dart';
 import '../models/pet.dart';
+import '../services/localizacao_service.dart';
 import '../services/pet_service.dart';
+import 'detalhes_pet_screen.dart';
 
 class MapaScreen extends StatefulWidget {
-  const MapaScreen({super.key});
+  final String especieInicial;
+
+  const MapaScreen({super.key, this.especieInicial = 'Todos'});
 
   @override
   State<MapaScreen> createState() => _MapaScreenState();
 }
 
 class _MapaScreenState extends State<MapaScreen> {
-  final MapController _mapController = MapController();
-
-  // Centro aproximado de São Paulo
-  static const LatLng _centroSP = LatLng(-23.5610, -46.5250);
-
-  // Pets reais vindos do Firestore (criado uma vez só)
-  late final Stream<List<Pet>> _petsStream;
+  final _mapa = MapController();
+  final _busca = TextEditingController();
+  late final Stream<List<Pet>> _pets;
+  late String _especie;
 
   @override
   void initState() {
     super.initState();
-    _petsStream = PetService().listarPets();
+    _pets = PetService().listarPets();
+    _especie = widget.especieInicial;
   }
 
-  void _abrirDetalhesPet(Pet pet) {
+  @override
+  void dispose() {
+    _busca.dispose();
+    super.dispose();
+  }
+
+  Future<void> _irParaMinhaPosicao() async {
+    final p = await LocalizacaoService.instancia.atualizar();
+    if (!mounted) return;
+    if (p == null) {
+      mostrarAviso(context, 'Não foi possível obter sua localização.');
+      return;
+    }
+    _mapa.move(p, 15);
+  }
+
+  void _abrirPreview(Pet pet) {
     showModalBottomSheet(
       context: context,
+      showDragHandle: false,
       backgroundColor: Colors.transparent,
-      builder: (_) => _PetPreviewSheet(pet: pet),
+      builder: (_) => _PreviewPet(pet: pet),
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final inicio =
+        LocalizacaoService.instancia.posicao.value ?? LocalizacaoService.padrao;
+
     return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          'Mapa de Animais Desaparecidos',
-          style: GoogleFonts.poppins(fontWeight: FontWeight.w600, fontSize: 16),
-        ),
-      ),
-      body: Stack(
+      appBar: AppBar(title: const Text('Mapa de casos')),
+      body: Column(
         children: [
-          FlutterMap(
-            mapController: _mapController,
-            options: const MapOptions(
-              initialCenter: _centroSP,
-              initialZoom: 11.5,
-              minZoom: 4,
-              maxZoom: 18,
-            ),
-            children: [
-              TileLayer(
-                urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                userAgentPackageName: 'com.example.petcade',
-              ),
-              StreamBuilder<List<Pet>>(
-                stream: _petsStream,
-                builder: (context, snapshot) {
-                  final pets = (snapshot.data ?? [])
-                      .where((p) => p.latitude != 0 || p.longitude != 0)
-                      .toList();
-                  return MarkerLayer(
-                    markers: pets
-                        .map(
-                          (pet) => Marker(
-                            point: LatLng(pet.latitude, pet.longitude),
-                            width: 44,
-                            height: 50,
-                            child: GestureDetector(
-                              onTap: () => _abrirDetalhesPet(pet),
-                              child: _PetPin(especie: pet.especie),
-                            ),
-                          ),
-                        )
-                        .toList(),
-                  );
-                },
-              ),
-            ],
-          ),
-
-          // Legenda flutuante no topo
-          Positioned(
-            top: 12,
-            left: 16,
-            right: 16,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(14),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.08),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Text(
-                'Visualize os pets perdidos próximos a você',
-                style: GoogleFonts.poppins(
-                  fontSize: 12,
-                  color: AppColors.textoSecundario,
-                ),
-              ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+            child: CampoBusca(
+              dica: 'Buscar por nome, raça ou bairro',
+              controller: _busca,
+              onChanged: (_) => setState(() {}),
             ),
           ),
-
-          // Botões de zoom
-          Positioned(
-            right: 16,
-            bottom: 24,
-            child: Column(
+          Expanded(
+            child: Stack(
               children: [
-                _BotaoMapa(
-                  icon: Icons.add_rounded,
-                  onTap: () => _mapController.move(
-                    _mapController.camera.center,
-                    _mapController.camera.zoom + 1,
+                FlutterMap(
+                  mapController: _mapa,
+                  options: MapOptions(
+                    initialCenter: inicio,
+                    initialZoom: 13,
+                    minZoom: 4,
+                    maxZoom: 18,
+                  ),
+                  children: [
+                    TileLayer(
+                      urlTemplate:
+                          'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                      userAgentPackageName: 'com.example.petcade',
+                    ),
+                    // Minha posição (ponto roxo)
+                    ValueListenableBuilder<LatLng?>(
+                      valueListenable: LocalizacaoService.instancia.posicao,
+                      builder: (context, p, _) => MarkerLayer(
+                        markers: [
+                          if (p != null)
+                            Marker(
+                              point: p,
+                              width: 22,
+                              height: 22,
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  color: AppColors.roxo,
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: Colors.white,
+                                    width: 3,
+                                  ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: AppColors.roxo.withValues(
+                                        alpha: 0.3,
+                                      ),
+                                      blurRadius: 10,
+                                      spreadRadius: 4,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                    StreamBuilder<List<Pet>>(
+                      stream: _pets,
+                      builder: (context, snap) {
+                        final pets = FiltroPets(
+                          especie: _especie,
+                          texto: _busca.text.trim(),
+                        ).aplicar(snap.data ?? []).where((p) => p.temLocal);
+                        return MarkerLayer(
+                          markers: pets
+                              .map(
+                                (pet) => Marker(
+                                  point: LatLng(pet.latitude, pet.longitude),
+                                  width: 40,
+                                  height: 48,
+                                  alignment: Alignment.topCenter,
+                                  child: GestureDetector(
+                                    onTap: () => _abrirPreview(pet),
+                                    child: _Pin(pet: pet),
+                                  ),
+                                ),
+                              )
+                              .toList(),
+                        );
+                      },
+                    ),
+                    const RichAttributionWidget(
+                      attributions: [
+                        TextSourceAttribution('OpenStreetMap contributors'),
+                      ],
+                    ),
+                  ],
+                ),
+                // Filtros
+                Positioned(
+                  left: 16,
+                  bottom: 20,
+                  right: 80,
+                  child: FiltroEspecie(
+                    valor: _especie,
+                    onChanged: (e) => setState(() => _especie = e),
                   ),
                 ),
-                const SizedBox(height: 8),
-                _BotaoMapa(
-                  icon: Icons.remove_rounded,
-                  onTap: () => _mapController.move(
-                    _mapController.camera.center,
-                    _mapController.camera.zoom - 1,
+                // Minha localização
+                Positioned(
+                  right: 16,
+                  bottom: 20,
+                  child: Material(
+                    color: Theme.of(context).colorScheme.surface,
+                    shape: const CircleBorder(),
+                    elevation: 3,
+                    child: InkWell(
+                      customBorder: const CircleBorder(),
+                      onTap: _irParaMinhaPosicao,
+                      child: Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: Icon(
+                          Icons.my_location_rounded,
+                          size: 22,
+                          color: AppColors.destaque(context),
+                        ),
+                      ),
+                    ),
                   ),
                 ),
               ],
@@ -146,10 +201,11 @@ class _MapaScreenState extends State<MapaScreen> {
   }
 }
 
-class _PetPin extends StatelessWidget {
-  final String especie;
+/// Pin laranja com o ícone da espécie.
+class _Pin extends StatelessWidget {
+  final Pet pet;
 
-  const _PetPin({required this.especie});
+  const _Pin({required this.pet});
 
   @override
   Widget build(BuildContext context) {
@@ -157,122 +213,114 @@ class _PetPin extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         Container(
-          padding: const EdgeInsets.all(8),
+          width: 36,
+          height: 36,
           decoration: BoxDecoration(
-            color: AppColors.laranja,
+            color: Colors.white,
             shape: BoxShape.circle,
-            border: Border.all(color: Colors.white, width: 2),
+            border: Border.all(color: AppColors.laranja, width: 2.5),
             boxShadow: [
-              BoxShadow(color: Colors.black.withValues(alpha: 0.25), blurRadius: 6),
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.2),
+                blurRadius: 6,
+              ),
             ],
           ),
-          child: Icon(
-            especie == 'Gato' ? Icons.pets_rounded : Icons.pets_rounded,
-            color: Colors.white,
-            size: 18,
+          child: ClipOval(
+            child: pet.fotos.isNotEmpty
+                ? PetFoto(pet: pet, width: 36, height: 36)
+                : const Icon(
+                    Icons.pets_rounded,
+                    size: 16,
+                    color: AppColors.laranja,
+                  ),
           ),
         ),
-        CustomPaint(size: const Size(10, 6), painter: _TrianguloPainter()),
+        CustomPaint(size: const Size(10, 7), painter: _Triangulo()),
       ],
     );
   }
 }
 
-class _TrianguloPainter extends CustomPainter {
+class _Triangulo extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
-    final paint = Paint()..color = AppColors.laranja;
     final path = Path()
       ..moveTo(0, 0)
       ..lineTo(size.width, 0)
       ..lineTo(size.width / 2, size.height)
       ..close();
-    canvas.drawPath(path, paint);
+    canvas.drawPath(path, Paint()..color = AppColors.laranja);
   }
 
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
-class _BotaoMapa extends StatelessWidget {
-  final IconData icon;
-  final VoidCallback onTap;
-
-  const _BotaoMapa({required this.icon, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.white,
-      shape: const CircleBorder(),
-      elevation: 2,
-      child: InkWell(
-        customBorder: const CircleBorder(),
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(10),
-          child: Icon(icon, color: AppColors.azulEscuro),
-        ),
-      ),
-    );
-  }
-}
-
-class _PetPreviewSheet extends StatelessWidget {
+class _PreviewPet extends StatelessWidget {
   final Pet pet;
 
-  const _PetPreviewSheet({required this.pet});
+  const _PreviewPet({required this.pet});
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.all(16),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Row(
-        children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(14),
-            child: PetFoto(pet: pet, width: 70, height: 70),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '${pet.nome} · ${pet.especie}',
-                  style: GoogleFonts.poppins(
-                    fontWeight: FontWeight.w700,
-                    fontSize: 15,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  pet.localizacao,
-                  style: GoogleFonts.poppins(
-                    fontSize: 12,
-                    color: AppColors.textoSecundario,
-                  ),
-                ),
-                if (pet.recompensa != null) ...[
-                  const SizedBox(height: 4),
-                  Text(
-                    'Recompensa: R\$ ${pet.recompensa!.toStringAsFixed(0)}',
-                    style: GoogleFonts.poppins(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.laranja,
+    final d = LocalizacaoService.instancia.distanciaAte(pet);
+    return SafeArea(
+      child: Container(
+        margin: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: InkWell(
+          onTap: () {
+            final navegador = Navigator.of(context);
+            navegador.pop();
+            navegador.push(
+              MaterialPageRoute(builder: (_) => DetalhesPetScreen(pet: pet)),
+            );
+          },
+          child: Row(
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: PetFoto(pet: pet, width: 72, height: 72),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SeloStatus(pet: pet),
+                    const SizedBox(height: 2),
+                    Text(
+                      pet.nome,
+                      style: GoogleFonts.poppins(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
-                  ),
-                ],
-              ],
-            ),
+                    Text(
+                      [
+                        pet.especieRaca,
+                        if (d != null) formatarDistancia(d),
+                      ].where((s) => s.isNotEmpty).join(' · '),
+                      style: GoogleFonts.poppins(
+                        fontSize: 12,
+                        color: AppColors.textoSecundario,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(
+                Icons.chevron_right_rounded,
+                color: AppColors.textoSecundario,
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }

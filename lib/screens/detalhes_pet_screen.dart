@@ -1,0 +1,597 @@
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:share_plus/share_plus.dart';
+
+import '../core/theme/app_colors.dart';
+import '../core/utils/formatos.dart';
+import '../core/widgets/comuns.dart';
+import '../core/widgets/pet_foto.dart';
+import '../core/widgets/selo_status.dart';
+import '../models/pet.dart';
+import '../models/usuario.dart';
+import '../services/localizacao_service.dart';
+import '../services/notificacao_service.dart';
+import '../services/pet_service.dart';
+import '../services/usuario_service.dart';
+
+void abrirDetalhesPet(BuildContext context, Pet pet) {
+  Navigator.push(
+    context,
+    MaterialPageRoute(builder: (_) => DetalhesPetScreen(pet: pet)),
+  );
+}
+
+class DetalhesPetScreen extends StatefulWidget {
+  final Pet pet;
+
+  const DetalhesPetScreen({super.key, required this.pet});
+
+  @override
+  State<DetalhesPetScreen> createState() => _DetalhesPetScreenState();
+}
+
+class _DetalhesPetScreenState extends State<DetalhesPetScreen> {
+  late final Stream<Pet?> _petStream;
+  late final Stream<Usuario?> _usuario;
+  final _paginas = PageController();
+  int _foto = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _petStream = widget.pet.id == null
+        ? Stream.value(widget.pet)
+        : PetService().pet(widget.pet.id!);
+    _usuario = UsuarioService().usuarioAtual();
+  }
+
+  @override
+  void dispose() {
+    _paginas.dispose();
+    super.dispose();
+  }
+
+  String get _meuUid => FirebaseAuth.instance.currentUser?.uid ?? '';
+
+  void _compartilhar(Pet pet) {
+    final linhas = [
+      '🐾 ${pet.perdido ? 'Animal perdido' : 'Animal encontrado'}: ${pet.nome}',
+      if (pet.especieRaca.isNotEmpty) pet.especieRaca,
+      if (pet.localizacao.isNotEmpty) 'Visto por último em: ${pet.localizacao}',
+      'Data: ${formatarDataHora(pet.vistoEm)}',
+      if (pet.descricao.isNotEmpty) pet.descricao,
+      if (pet.recompensa != null && pet.recompensa! > 0)
+        'Recompensa: R\$ ${pet.recompensa!.toStringAsFixed(0)}',
+      '',
+      'Viu esse pet? Avise pelo app PetCadê!',
+    ];
+    SharePlus.instance.share(ShareParams(text: linhas.join('\n')));
+  }
+
+  Future<void> _informarAvistamento(Pet pet) async {
+    final enviado = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => _FormAvistamento(pet: pet),
+    );
+    if (enviado == true && mounted) {
+      mostrarAviso(context, 'Obrigado! O tutor foi avisado.');
+    }
+  }
+
+  Future<void> _marcarEncontrado(Pet pet) async {
+    final ok = await confirmar(
+      context,
+      titulo: 'Pet encontrado?',
+      texto:
+          'O anúncio de ${pet.nome} vai para "Finalizados" e sai das buscas.',
+      acao: 'Sim, foi encontrado',
+    );
+    if (!ok) return;
+    try {
+      await PetService().marcarEncontrado(pet);
+      if (mounted) mostrarAviso(context, 'Que ótima notícia! 🎉');
+    } catch (e) {
+      if (mounted) mostrarAviso(context, 'Erro: $e');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<Pet?>(
+      stream: _petStream,
+      initialData: widget.pet,
+      builder: (context, snap) {
+        final pet = snap.data;
+        if (pet == null) {
+          return Scaffold(
+            appBar: AppBar(),
+            body: const EstadoVazio(
+              icone: Icons.delete_outline_rounded,
+              titulo: 'Este anúncio foi removido',
+            ),
+          );
+        }
+        final souDono = pet.donoId.isNotEmpty && pet.donoId == _meuUid;
+        return Scaffold(
+          body: CustomScrollView(
+            slivers: [
+              _galeria(pet),
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+                sliver: SliverList.list(
+                  children: [
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              SeloStatus(pet: pet),
+                              const SizedBox(height: 6),
+                              Text(
+                                pet.nome.isEmpty ? 'Sem nome' : pet.nome,
+                                style: GoogleFonts.poppins(
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        if (!souDono) _botaoFavorito(pet),
+                      ],
+                    ),
+                    const SizedBox(height: 14),
+                    _Atributos(pet: pet),
+                    const SizedBox(height: 22),
+                    _titulo('Última vez visto'),
+                    const SizedBox(height: 8),
+                    _InfoLinha(
+                      icone: Icons.calendar_today_outlined,
+                      texto: formatarDataHora(pet.vistoEm),
+                    ),
+                    if (pet.localizacao.isNotEmpty)
+                      _InfoLinha(
+                        icone: Icons.location_on_outlined,
+                        texto: pet.localizacao,
+                      ),
+                    ValueListenableBuilder(
+                      valueListenable: LocalizacaoService.instancia.posicao,
+                      builder: (context, _, _) {
+                        final d = LocalizacaoService.instancia.distanciaAte(
+                          pet,
+                        );
+                        return d == null
+                            ? const SizedBox.shrink()
+                            : _InfoLinha(
+                                icone: Icons.near_me_outlined,
+                                texto: '${formatarDistancia(d)} de você',
+                              );
+                      },
+                    ),
+                    if (pet.descricao.isNotEmpty || pet.cor.isNotEmpty) ...[
+                      const SizedBox(height: 18),
+                      _titulo('Características'),
+                      const SizedBox(height: 6),
+                      Text(
+                        [
+                          if (pet.cor.isNotEmpty) 'Cor: ${pet.cor}.',
+                          pet.descricao,
+                        ].where((s) => s.isNotEmpty).join('\n'),
+                        style: GoogleFonts.poppins(
+                          fontSize: 14,
+                          height: 1.5,
+                          color: AppColors.textoSecundario,
+                        ),
+                      ),
+                    ],
+                    if (pet.recompensa != null && pet.recompensa! > 0) ...[
+                      const SizedBox(height: 18),
+                      Container(
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: AppColors.laranjaClaro,
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(
+                              Icons.volunteer_activism_outlined,
+                              size: 20,
+                              color: AppColors.laranja,
+                            ),
+                            const SizedBox(width: 10),
+                            Text(
+                              'Recompensa de R\$ ${pet.recompensa!.toStringAsFixed(0)}',
+                              style: GoogleFonts.poppins(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.textoPrincipal,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                    if (pet.donoNome.isNotEmpty) ...[
+                      const SizedBox(height: 18),
+                      Text(
+                        'Anunciado por ${pet.donoNome} em ${formatarData(pet.criadoEm)}',
+                        style: GoogleFonts.poppins(
+                          fontSize: 12,
+                          color: AppColors.textoSecundario,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+          bottomNavigationBar: SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () => _compartilhar(pet),
+                      icon: const Icon(Icons.share_outlined, size: 18),
+                      label: const Text('Compartilhar'),
+                    ),
+                  ),
+                  if (pet.perdido) ...[
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: () => souDono
+                            ? _marcarEncontrado(pet)
+                            : _informarAvistamento(pet),
+                        icon: Icon(
+                          souDono
+                              ? Icons.check_circle_outline_rounded
+                              : Icons.visibility_outlined,
+                          size: 18,
+                        ),
+                        label: Text(souDono ? 'Encontrado' : 'Eu vi este pet'),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _galeria(Pet pet) {
+    final total = pet.fotos.isEmpty ? 1 : pet.fotos.length;
+    return SliverAppBar(
+      expandedHeight: 320,
+      pinned: true,
+      backgroundColor: AppColors.roxoEscuro,
+      foregroundColor: Colors.white,
+      leading: Padding(
+        padding: const EdgeInsets.all(8),
+        child: CircleAvatar(
+          backgroundColor: Colors.black.withValues(alpha: 0.3),
+          child: IconButton(
+            icon: const Icon(
+              Icons.arrow_back_ios_new_rounded,
+              size: 16,
+              color: Colors.white,
+            ),
+            onPressed: () => Navigator.pop(context),
+          ),
+        ),
+      ),
+      flexibleSpace: FlexibleSpaceBar(
+        background: Stack(
+          fit: StackFit.expand,
+          children: [
+            PageView.builder(
+              controller: _paginas,
+              itemCount: total,
+              onPageChanged: (i) => setState(() => _foto = i),
+              itemBuilder: (_, i) => PetFoto(pet: pet, indice: i),
+            ),
+            if (total > 1)
+              Positioned(
+                right: 16,
+                bottom: 16,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.5),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    '${_foto + 1}/$total',
+                    style: GoogleFonts.poppins(
+                      fontSize: 12,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _botaoFavorito(Pet pet) {
+    return StreamBuilder<Usuario?>(
+      stream: _usuario,
+      builder: (context, snap) {
+        final salvo = snap.data?.favoritos.contains(pet.id) ?? false;
+        return IconButton(
+          tooltip: salvo ? 'Remover dos salvos' : 'Salvar',
+          onPressed: pet.id == null
+              ? null
+              : () => UsuarioService().alternarFavorito(pet.id!, !salvo),
+          icon: Icon(
+            salvo ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+            color: salvo ? AppColors.perdido : AppColors.textoSecundario,
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _titulo(String texto) => Text(
+    texto,
+    style: GoogleFonts.poppins(fontSize: 15, fontWeight: FontWeight.w600),
+  );
+}
+
+/// Linha com Espécie · Peso · Sexo · Porte
+class _Atributos extends StatelessWidget {
+  final Pet pet;
+
+  const _Atributos({required this.pet});
+
+  @override
+  Widget build(BuildContext context) {
+    final itens = <(IconData, String)>[
+      if (pet.especie.isNotEmpty) (Icons.pets_rounded, pet.especie),
+      if (pet.peso != null)
+        (
+          Icons.monitor_weight_outlined,
+          '${pet.peso!.toStringAsFixed(pet.peso! % 1 == 0 ? 0 : 1)} kg',
+        ),
+      if (pet.sexo.isNotEmpty)
+        (
+          pet.sexo == 'Fêmea' ? Icons.female_rounded : Icons.male_rounded,
+          pet.sexo,
+        ),
+      if (pet.porte.isNotEmpty) (Icons.straighten_rounded, pet.porte),
+    ];
+    if (itens.isEmpty) return const SizedBox.shrink();
+
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        children: [
+          for (var i = 0; i < itens.length; i++) ...[
+            if (i > 0)
+              Container(
+                width: 1,
+                height: 32,
+                color: Theme.of(context).colorScheme.outline,
+              ),
+            Expanded(
+              child: Column(
+                children: [
+                  Icon(itens[i].$1, size: 18, color: AppColors.destaque(context)),
+                  const SizedBox(height: 4),
+                  Text(
+                    itens[i].$2,
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.poppins(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _InfoLinha extends StatelessWidget {
+  final IconData icone;
+  final String texto;
+
+  const _InfoLinha({required this.icone, required this.texto});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 5),
+      child: Row(
+        children: [
+          Icon(icone, size: 18, color: AppColors.textoSecundario),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              texto,
+              style: GoogleFonts.poppins(
+                fontSize: 14,
+                color: AppColors.textoSecundario,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Formulário "Eu vi este pet".
+class _FormAvistamento extends StatefulWidget {
+  final Pet pet;
+
+  const _FormAvistamento({required this.pet});
+
+  @override
+  State<_FormAvistamento> createState() => _FormAvistamentoState();
+}
+
+class _FormAvistamentoState extends State<_FormAvistamento> {
+  final _onde = TextEditingController();
+  final _mensagem = TextEditingController();
+  final _telefone = TextEditingController();
+  bool _enviando = false;
+
+  @override
+  void dispose() {
+    _onde.dispose();
+    _mensagem.dispose();
+    _telefone.dispose();
+    super.dispose();
+  }
+
+  Future<void> _enviar() async {
+    if (_onde.text.trim().isEmpty) {
+      mostrarAviso(context, 'Diga onde você viu o pet.');
+      return;
+    }
+    setState(() => _enviando = true);
+    try {
+      await NotificacaoService().informarAvistamento(
+        pet: widget.pet,
+        onde: _onde.text.trim(),
+        mensagem: _mensagem.text.trim(),
+        telefone: _telefone.text.trim(),
+      );
+      if (mounted) Navigator.pop(context, true);
+    } catch (e) {
+      if (mounted) {
+        setState(() => _enviando = false);
+        mostrarAviso(context, e.toString().replaceFirst('Exception: ', ''));
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+        20,
+        0,
+        20,
+        20 + MediaQuery.of(context).viewInsets.bottom,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            'Você viu ${widget.pet.nome}?',
+            style: GoogleFonts.poppins(
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          Text(
+            'O tutor vai receber uma notificação.',
+            style: GoogleFonts.poppins(
+              fontSize: 13,
+              color: AppColors.textoSecundario,
+            ),
+          ),
+          const SizedBox(height: 16),
+          TextField(
+            controller: _onde,
+            decoration: const InputDecoration(
+              hintText: 'Onde? (rua, bairro, ponto de referência)',
+              prefixIcon: Icon(Icons.location_on_outlined, size: 20),
+            ),
+          ),
+          const SizedBox(height: 10),
+          TextField(
+            controller: _mensagem,
+            maxLines: 3,
+            decoration: const InputDecoration(
+              hintText: 'Detalhes (opcional)',
+            ),
+          ),
+          const SizedBox(height: 10),
+          TextField(
+            controller: _telefone,
+            keyboardType: TextInputType.phone,
+            decoration: const InputDecoration(
+              hintText: 'Seu telefone para contato (opcional)',
+              prefixIcon: Icon(Icons.phone_outlined, size: 20),
+            ),
+          ),
+          const SizedBox(height: 16),
+          ElevatedButton(
+            onPressed: _enviando ? null : _enviar,
+            child: _enviando
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  )
+                : const Text('Enviar aviso'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Caixa de confirmação simples.
+Future<bool> confirmar(
+  BuildContext context, {
+  required String titulo,
+  required String texto,
+  required String acao,
+  bool perigo = false,
+}) async {
+  final r = await showDialog<bool>(
+    context: context,
+    builder: (_) => AlertDialog(
+      title: Text(
+        titulo,
+        style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w700),
+      ),
+      content: Text(texto, style: GoogleFonts.poppins(fontSize: 14)),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context, false),
+          child: const Text('Cancelar'),
+        ),
+        TextButton(
+          onPressed: () => Navigator.pop(context, true),
+          style: TextButton.styleFrom(
+            foregroundColor: perigo ? AppColors.perdido : AppColors.laranja,
+          ),
+          child: Text(acao),
+        ),
+      ],
+    ),
+  );
+  return r == true;
+}

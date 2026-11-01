@@ -6,20 +6,29 @@ import 'package:flutter/material.dart';
 import '../../models/pet.dart';
 import '../theme/app_colors.dart';
 
-/// Mostra a foto do pet. Funciona tanto com a foto salva em base64
-/// (cadastros novos) quanto com URL (cadastros antigos).
+/// Mostra uma foto do pet (base64 salvo no Firestore, ou URL antiga).
 class PetFoto extends StatefulWidget {
   final Pet pet;
+  final int indice;
   final double? width;
   final double? height;
 
-  const PetFoto({super.key, required this.pet, this.width, this.height});
+  const PetFoto({
+    super.key,
+    required this.pet,
+    this.indice = 0,
+    this.width,
+    this.height,
+  });
 
   @override
   State<PetFoto> createState() => _PetFotoState();
 }
 
 class _PetFotoState extends State<PetFoto> {
+  // Cache simples para não decodificar a mesma foto várias vezes.
+  static final Map<int, Uint8List> _cache = {};
+
   Uint8List? _bytes;
 
   @override
@@ -31,25 +40,35 @@ class _PetFotoState extends State<PetFoto> {
   @override
   void didUpdateWidget(covariant PetFoto oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.pet.fotoBase64 != widget.pet.fotoBase64) _decodificar();
+    if (oldWidget.pet != widget.pet || oldWidget.indice != widget.indice) {
+      _decodificar();
+    }
   }
 
-  // Decodifica uma vez só (e não a cada rebuild), para a lista ficar leve.
   void _decodificar() {
     _bytes = null;
-    if (widget.pet.fotoBase64.isEmpty) return;
+    final fotos = widget.pet.fotos;
+    if (widget.indice >= fotos.length) return;
+    final texto = fotos[widget.indice];
+    final chave = texto.hashCode ^ texto.length;
     try {
-      _bytes = base64Decode(widget.pet.fotoBase64);
+      _bytes = _cache[chave] ??= base64Decode(texto);
+      if (_cache.length > 80) _cache.remove(_cache.keys.first);
     } catch (_) {
       _bytes = null;
     }
   }
 
-  Widget _semFoto() => Container(
+  Widget _semFoto(BuildContext context) => Container(
     width: widget.width,
     height: widget.height,
-    color: AppColors.laranjaClaro.withValues(alpha: 0.4),
-    child: const Icon(Icons.pets_rounded, size: 40, color: AppColors.laranja),
+    color: AppColors.fundoDestaque(context),
+    alignment: Alignment.center,
+    child: Icon(
+      Icons.pets_rounded,
+      size: 28,
+      color: AppColors.destaque(context).withValues(alpha: 0.35),
+    ),
   );
 
   @override
@@ -61,18 +80,18 @@ class _PetFotoState extends State<PetFoto> {
         height: widget.height,
         fit: BoxFit.cover,
         gaplessPlayback: true,
-        errorBuilder: (_, _, _) => _semFoto(),
+        errorBuilder: (_, _, _) => _semFoto(context),
       );
     }
-    if (widget.pet.fotoUrl.isNotEmpty) {
+    if (widget.indice == 0 && widget.pet.fotoUrl.isNotEmpty) {
       return Image.network(
         widget.pet.fotoUrl,
         width: widget.width,
         height: widget.height,
         fit: BoxFit.cover,
-        errorBuilder: (_, _, _) => _semFoto(),
+        errorBuilder: (_, _, _) => _semFoto(context),
       );
     }
-    return _semFoto();
+    return _semFoto(context);
   }
 }

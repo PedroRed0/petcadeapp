@@ -1,13 +1,33 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Qualquer pessoa pode ver e cadastrar pets perdidos.
-    // (Quando tiver login, troque "if true" por "if request.auth != null".)
+
+    function logado() { return request.auth != null; }
+    function eu() { return request.auth.uid; }
+
+    // Anúncios de pets
     match /pets_perdidos/{petId} {
-      allow read: if true;
-      allow create: if request.resource.data.nome is string
+      // Qualquer usuário logado vê os anúncios
+      allow read: if logado();
+      // Só cria anúncio em seu próprio nome
+      allow create: if logado()
+                    && request.resource.data.donoId == eu()
+                    && request.resource.data.nome is string
                     && request.resource.data.nome.size() > 0;
-      allow update, delete: if false;
+      // Só o dono edita / exclui
+      allow update, delete: if logado() && resource.data.donoId == eu();
+    }
+
+    // Perfis (nome, telefone, favoritos)
+    match /usuarios/{uid} {
+      allow read: if logado();
+      allow write: if logado() && uid == eu();
+    }
+
+    // Notificações dentro do app
+    match /notificacoes/{id} {
+      allow read, update, delete: if logado() && resource.data.paraId == eu();
+      allow create: if logado();
     }
   }
 }

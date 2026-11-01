@@ -213,9 +213,7 @@ class _AbaAnuncios extends StatelessWidget {
                   maxLines: 1,
                   style: GoogleFonts.poppins(
                     fontSize: 13,
-                    fontWeight: selecionada
-                        ? FontWeight.w600
-                        : FontWeight.w400,
+                    fontWeight: selecionada ? FontWeight.w600 : FontWeight.w400,
                     color: selecionada
                         ? Colors.white
                         : tema.colorScheme.onSurface,

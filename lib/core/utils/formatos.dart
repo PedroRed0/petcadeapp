@@ -4,7 +4,8 @@ String formatarData(DateTime d) => '${_dd(d.day)}/${_dd(d.month)}/${d.year}';
 
 String formatarHora(DateTime d) => '${_dd(d.hour)}:${_dd(d.minute)}';
 
-String formatarDataHora(DateTime d) => '${formatarData(d)} - ${formatarHora(d)}';
+String formatarDataHora(DateTime d) =>
+    '${formatarData(d)} - ${formatarHora(d)}';
 
 /// 850 m, 1,2 km, 12 km
 String formatarDistancia(double metros) {

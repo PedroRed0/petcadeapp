@@ -41,8 +41,7 @@ final _pets = <Map<String, dynamic>>[
     'sexo': 'Macho',
     'porte': 'Grande',
     'peso': 32.5,
-    'descricao':
-        'Usa coleira vermelha com plaquinha, tem uma cicatriz na orelha esquerda e é muito dócil com crianças.',
+    'descricao': 'Usa coleira vermelha com plaquinha, tem uma cicatriz na orelha esquerda e é muito dócil com crianças.',
     'fotos': [_png, _png],
     'localizacao': 'Jardim Nossa Senhora do Carmo, Itaquera - São Paulo - SP',
     'latitude': -23.54,
@@ -97,8 +96,7 @@ Future<FakeFirebaseFirestore> _prepararFirebase() async {
     'paraId': _uid,
     'tipo': 'avistamento',
     'titulo': 'Novo avistamento de um pet muito querido',
-    'mensagem':
-        'Fulano de Tal informou que viu Bartolomeu na Avenida Jacu-Pêssego perto do posto de gasolina.',
+    'mensagem': 'Fulano de Tal informou que viu Bartolomeu na Avenida Jacu-Pêssego perto do posto de gasolina.',
     'petId': 'pet0',
     'telefone': '(11) 91234-5678',
     'lida': false,
@@ -153,9 +151,8 @@ Future<void> _abrir(
       key: UniqueKey(),
       theme: AppTheme.light,
       builder: (context, child) => MediaQuery(
-        data: MediaQuery.of(
-          context,
-        ).copyWith(textScaler: TextScaler.linear(escala)),
+        data: MediaQuery.of(context)
+            .copyWith(textScaler: TextScaler.linear(escala)),
         child: child!,
       ),
       home: tela,

@@ -435,7 +435,11 @@ class _Atributos extends StatelessWidget {
             Expanded(
               child: Column(
                 children: [
-                  Icon(itens[i].$1, size: 18, color: AppColors.destaque(context)),
+                  Icon(
+                    itens[i].$1,
+                    size: 18,
+                    color: AppColors.destaque(context),
+                  ),
                   const SizedBox(height: 4),
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 4),
@@ -575,9 +579,7 @@ class _FormAvistamentoState extends State<_FormAvistamento> {
           TextField(
             controller: _mensagem,
             maxLines: 3,
-            decoration: const InputDecoration(
-              hintText: 'Detalhes (opcional)',
-            ),
+            decoration: const InputDecoration(hintText: 'Detalhes (opcional)'),
           ),
           const SizedBox(height: 10),
           TextField(

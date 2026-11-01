@@ -58,7 +58,8 @@ class _BuscarScreenState extends State<BuscarScreen> {
   }) async {
     final escolha = await abrirJanela<String>(
       context: context,
-      builder: (_) => _ListaOpcoes(titulo: titulo, opcoes: opcoes, atual: atual),
+      builder: (_) =>
+          _ListaOpcoes(titulo: titulo, opcoes: opcoes, atual: atual),
     );
     if (escolha != null) onEscolher(escolha == 'Todos' ? '' : escolha);
   }
@@ -108,7 +109,9 @@ class _BuscarScreenState extends State<BuscarScreen> {
         ),
       ),
     );
-    if (regiao != null) setState(() => _filtro = _filtro.copyWith(regiao: regiao));
+    if (regiao != null) {
+      setState(() => _filtro = _filtro.copyWith(regiao: regiao));
+    }
   }
 
   @override
@@ -282,8 +285,7 @@ class _ListaOpcoes extends StatelessWidget {
                   ListTile(
                     contentPadding: const EdgeInsets.symmetric(horizontal: 20),
                     title: Text(o, style: GoogleFonts.poppins(fontSize: 14)),
-                    trailing:
-                        (o == atual || (atual.isEmpty && o == 'Todos'))
+                    trailing: (o == atual || (atual.isEmpty && o == 'Todos'))
                         ? const Icon(
                             Icons.check_rounded,
                             color: AppColors.laranja,

@@ -104,8 +104,9 @@ class _CriarContaScreenState extends State<CriarContaScreen> {
                     hintText: 'E-mail',
                     prefixIcon: Icon(Icons.mail_outline_rounded, size: 20),
                   ),
-                  validator: (v) =>
-                      (v ?? '').contains('@') ? null : 'Digite um e-mail válido',
+                  validator: (v) => (v ?? '').contains('@')
+                      ? null
+                      : 'Digite um e-mail válido',
                 ),
                 const SizedBox(height: 12),
                 TextFormField(
@@ -122,7 +123,10 @@ class _CriarContaScreenState extends State<CriarContaScreen> {
                   obscureText: !_senhaVisivel,
                   decoration: InputDecoration(
                     hintText: 'Senha',
-                    prefixIcon: const Icon(Icons.lock_outline_rounded, size: 20),
+                    prefixIcon: const Icon(
+                      Icons.lock_outline_rounded,
+                      size: 20,
+                    ),
                     suffixIcon: _olho(
                       _senhaVisivel,
                       () => setState(() => _senhaVisivel = !_senhaVisivel),
@@ -138,7 +142,10 @@ class _CriarContaScreenState extends State<CriarContaScreen> {
                   obscureText: !_confirmarVisivel,
                   decoration: InputDecoration(
                     hintText: 'Confirmar senha',
-                    prefixIcon: const Icon(Icons.lock_outline_rounded, size: 20),
+                    prefixIcon: const Icon(
+                      Icons.lock_outline_rounded,
+                      size: 20,
+                    ),
                     suffixIcon: _olho(
                       _confirmarVisivel,
                       () => setState(

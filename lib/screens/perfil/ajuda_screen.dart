@@ -26,10 +26,7 @@ class AjudaScreen extends StatelessWidget {
       'Por que não vejo a distância até os pets?',
       'Permita o acesso à localização nas configurações do celular e toque em Configurações > Atualizar minha localização.',
     ),
-    (
-      'O app é pago?',
-      'Não. O PetCadê é totalmente gratuito.',
-    ),
+    ('O app é pago?', 'Não. O PetCadê é totalmente gratuito.'),
   ];
 
   @override
@@ -49,9 +46,8 @@ class AjudaScreen extends StatelessWidget {
                 ),
               ),
               child: Theme(
-                data: Theme.of(
-                  context,
-                ).copyWith(dividerColor: Colors.transparent),
+                data: Theme.of(context)
+                    .copyWith(dividerColor: Colors.transparent),
                 child: ExpansionTile(
                   shape: const Border(),
                   iconColor: AppColors.laranja,

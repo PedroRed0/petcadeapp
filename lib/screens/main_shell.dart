@@ -93,54 +93,59 @@ class _BarraInferior extends StatelessWidget {
     return MediaQuery.withClampedTextScaling(
       maxScaleFactor: 1.15,
       child: Container(
-      decoration: BoxDecoration(
-        color: tema.colorScheme.surface,
-        border: Border(top: BorderSide(color: tema.colorScheme.outline)),
-      ),
-      child: SafeArea(
-        top: false,
-        child: SizedBox(
-          height: 64,
-          child: Row(
-            children: [
-              _item(Icons.home_outlined, Icons.home_rounded, 'Início', 0),
-              _item(Icons.search_rounded, Icons.search_rounded, 'Buscar', 1),
-              Expanded(
-                child: Center(
-                  child: Material(
-                    color: AppColors.laranja,
-                    shape: const CircleBorder(),
-                    elevation: 2,
-                    shadowColor: AppColors.laranja.withValues(alpha: 0.4),
-                    child: InkWell(
-                      customBorder: const CircleBorder(),
-                      onTap: onNovo,
-                      child: const SizedBox(
-                        width: 48,
-                        height: 48,
-                        child: Icon(
-                          Icons.add_rounded,
-                          color: Colors.white,
-                          size: 26,
+        decoration: BoxDecoration(
+          color: tema.colorScheme.surface,
+          border: Border(top: BorderSide(color: tema.colorScheme.outline)),
+        ),
+        child: SafeArea(
+          top: false,
+          child: SizedBox(
+            height: 64,
+            child: Row(
+              children: [
+                _item(Icons.home_outlined, Icons.home_rounded, 'Início', 0),
+                _item(Icons.search_rounded, Icons.search_rounded, 'Buscar', 1),
+                Expanded(
+                  child: Center(
+                    child: Material(
+                      color: AppColors.laranja,
+                      shape: const CircleBorder(),
+                      elevation: 2,
+                      shadowColor: AppColors.laranja.withValues(alpha: 0.4),
+                      child: InkWell(
+                        customBorder: const CircleBorder(),
+                        onTap: onNovo,
+                        child: const SizedBox(
+                          width: 48,
+                          height: 48,
+                          child: Icon(
+                            Icons.add_rounded,
+                            color: Colors.white,
+                            size: 26,
+                          ),
                         ),
                       ),
                     ),
                   ),
                 ),
-              ),
-              _item(
-                Icons.notifications_none_rounded,
-                Icons.notifications_rounded,
-                'Notificações',
-                2,
-                badge: naoLidas,
-              ),
-              _item(Icons.person_outline_rounded, Icons.person_rounded, 'Perfil', 3),
-            ],
+                _item(
+                  Icons.notifications_none_rounded,
+                  Icons.notifications_rounded,
+                  'Notificações',
+                  2,
+                  badge: naoLidas,
+                ),
+                _item(
+                  Icons.person_outline_rounded,
+                  Icons.person_rounded,
+                  'Perfil',
+                  3,
+                ),
+              ],
+            ),
           ),
         ),
       ),
-    ),
     );
   }
 
@@ -174,7 +179,7 @@ class _BarraInferior extends StatelessWidget {
                   rotulo,
                   maxLines: 1,
                   style: GoogleFonts.poppins(
-                fontSize: 10.5,
+                    fontSize: 10.5,
                     fontWeight: ativo ? FontWeight.w600 : FontWeight.w400,
                     color: cor,
                   ),

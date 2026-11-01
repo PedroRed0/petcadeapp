@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
+import '../config.dart';
 import 'firebase_refs.dart';
 
 /// Login com e-mail/senha e com Google (Firebase Authentication — grátis).
@@ -28,25 +29,52 @@ class AuthService {
       // No navegador, o próprio Firebase abre a janela do Google.
       cred = await _auth.signInWithPopup(GoogleAuthProvider());
     } else {
-      final google = GoogleSignIn.instance;
-      if (!_googleIniciado) {
-        await google.initialize();
-        _googleIniciado = true;
-      }
-      final GoogleSignInAccount conta;
       try {
-        conta = await google.authenticate();
+        final c = await _entrarComGoogleNativo();
+        if (c == null) return false; // cancelou
+        cred = c;
       } on GoogleSignInException catch (e) {
-        if (e.code == GoogleSignInExceptionCode.canceled) return false;
-        rethrow;
+        // Falta configuração (ex.: "ID do cliente da Web"): tenta pelo
+        // fluxo do próprio Firebase, que abre o Google no navegador.
+        if (e.code != GoogleSignInExceptionCode.clientConfigurationError &&
+            e.code != GoogleSignInExceptionCode.providerConfigurationError) {
+          rethrow;
+        }
+        try {
+          cred = await _auth.signInWithProvider(GoogleAuthProvider());
+        } on FirebaseAuthException catch (e2) {
+          if (e2.code == 'web-context-canceled' ||
+              e2.code == 'canceled' ||
+              e2.code == 'popup-closed-by-user') {
+            return false;
+          }
+          throw GoogleConfigException(e.code.name, e2.code);
+        }
       }
-      final idToken = conta.authentication.idToken;
-      cred = await _auth.signInWithCredential(
-        GoogleAuthProvider.credential(idToken: idToken),
-      );
     }
     await _garantirPerfil(cred.user!);
     return true;
+  }
+
+  /// Login pela tela nativa do Android/iOS (Credential Manager).
+  Future<UserCredential?> _entrarComGoogleNativo() async {
+    final google = GoogleSignIn.instance;
+    if (!_googleIniciado) {
+      await google.initialize(
+        serverClientId: googleWebClientId.isEmpty ? null : googleWebClientId,
+      );
+      _googleIniciado = true;
+    }
+    final GoogleSignInAccount conta;
+    try {
+      conta = await google.authenticate();
+    } on GoogleSignInException catch (e) {
+      if (e.code == GoogleSignInExceptionCode.canceled) return null;
+      rethrow;
+    }
+    return _auth.signInWithCredential(
+      GoogleAuthProvider.credential(idToken: conta.authentication.idToken),
+    );
   }
 
   /// Na primeira vez que alguém entra com Google, cria o perfil.
@@ -99,9 +127,13 @@ class AuthService {
 
   /// Traduz os erros para mensagens amigáveis.
   static String mensagemErro(Object e) {
+    if (e is GoogleConfigException) {
+      return 'O login com Google ainda não está configurado neste app '
+          '(${e.codigoNativo} / ${e.codigoFirebase}). Veja o passo a passo '
+          'em lib/config.dart.';
+    }
     if (e is GoogleSignInException) {
-      return 'Não foi possível entrar com o Google (${e.code.name}). '
-          'Confira o SHA-1 do app no Firebase.';
+      return 'Não foi possível entrar com o Google (${e.code.name}).';
     }
     if (e is FirebaseAuthException) {
       switch (e.code) {
@@ -131,4 +163,15 @@ class AuthService {
     }
     return e.toString().replaceFirst('Exception: ', '');
   }
+}
+
+/// O login com Google falhou por falta de configuração no Firebase.
+class GoogleConfigException implements Exception {
+  final String codigoNativo;
+  final String codigoFirebase;
+
+  GoogleConfigException(this.codigoNativo, this.codigoFirebase);
+
+  @override
+  String toString() => 'GoogleConfigException($codigoNativo, $codigoFirebase)';
 }

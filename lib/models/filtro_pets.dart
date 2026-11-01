@@ -89,10 +89,6 @@ class FiltroPets {
     return lista;
   }
 
-  int get quantidadeAtivos => [
-    regiao,
-    raca,
-    porte,
-    sexo,
-  ].where((s) => s.isNotEmpty).length;
+  int get quantidadeAtivos =>
+      [regiao, raca, porte, sexo].where((s) => s.isNotEmpty).length;
 }

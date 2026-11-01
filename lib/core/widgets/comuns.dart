@@ -63,7 +63,11 @@ class FiltroEspecie extends StatelessWidget {
 
   static const opcoes = {'Todos': 'Todos', 'Cachorro': 'Cães', 'Gato': 'Gatos'};
 
-  const FiltroEspecie({super.key, required this.valor, required this.onChanged});
+  const FiltroEspecie({
+    super.key,
+    required this.valor,
+    required this.onChanged,
+  });
 
   @override
   Widget build(BuildContext context) {

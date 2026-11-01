@@ -146,21 +146,23 @@ class _LoginScreenState extends State<LoginScreen> {
                           fontSize: 14,
                           color: AppColors.textoPrincipal,
                         ),
-                        decoration: _decoracao(
-                          'Senha',
-                          Icons.lock_outline_rounded,
-                        ).copyWith(
-                          suffixIcon: IconButton(
-                            icon: Icon(
-                              _senhaVisivel
-                                  ? Icons.visibility_outlined
-                                  : Icons.visibility_off_outlined,
-                              size: 20,
+                        decoration:
+                            _decoracao(
+                              'Senha',
+                              Icons.lock_outline_rounded,
+                            ).copyWith(
+                              suffixIcon: IconButton(
+                                icon: Icon(
+                                  _senhaVisivel
+                                      ? Icons.visibility_outlined
+                                      : Icons.visibility_off_outlined,
+                                  size: 20,
+                                ),
+                                onPressed: () => setState(
+                                  () => _senhaVisivel = !_senhaVisivel,
+                                ),
+                              ),
                             ),
-                            onPressed: () =>
-                                setState(() => _senhaVisivel = !_senhaVisivel),
-                          ),
-                        ),
                         validator: (v) =>
                             (v ?? '').isEmpty ? 'Digite sua senha' : null,
                       ),

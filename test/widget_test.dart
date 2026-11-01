@@ -52,8 +52,19 @@ void main() {
 
   group('FiltroPets', () {
     final pets = [
-      _pet('Thor', raca: 'Pug', local: 'Itaquera - SP', criado: DateTime(2026, 10, 3)),
-      _pet('Mia', especie: 'Gato', raca: 'Siamês', local: 'Mooca', criado: DateTime(2026, 10, 2)),
+      _pet(
+        'Thor',
+        raca: 'Pug',
+        local: 'Itaquera - SP',
+        criado: DateTime(2026, 10, 3),
+      ),
+      _pet(
+        'Mia',
+        especie: 'Gato',
+        raca: 'Siamês',
+        local: 'Mooca',
+        criado: DateTime(2026, 10, 2),
+      ),
       _pet('Luna', status: Pet.statusEncontrado),
     ];
 
@@ -79,10 +90,14 @@ void main() {
 
     test('ordena pelos mais próximos', () {
       final perto = _pet('Perto', lat: -23.55, lng: -46.63);
-      final longe = _pet('Longe', lat: -22.90, lng: -43.17, criado: DateTime(2026, 10, 9));
-      final r = const FiltroPets(
-        ordenacao: Ordenacao.proximos,
-      ).aplicar([longe, perto], posicao: const LatLng(-23.56, -46.64));
+      final longe = _pet(
+        'Longe',
+        lat: -22.90,
+        lng: -43.17,
+        criado: DateTime(2026, 10, 9),
+      );
+      final r = const FiltroPets(ordenacao: Ordenacao.proximos)
+          .aplicar([longe, perto], posicao: const LatLng(-23.56, -46.64));
       expect(r.first.nome, 'Perto');
     });
   });

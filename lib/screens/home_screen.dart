@@ -146,9 +146,10 @@ class _HomeScreenState extends State<HomeScreen> {
               return ValueListenableBuilder(
                 valueListenable: LocalizacaoService.instancia.posicao,
                 builder: (context, posicao, _) {
-                  final pets = const FiltroPets(
-                    ordenacao: Ordenacao.proximos,
-                  ).aplicar(snap.data!, posicao: posicao).take(10).toList();
+                  final pets = const FiltroPets(ordenacao: Ordenacao.proximos)
+                      .aplicar(snap.data!, posicao: posicao)
+                      .take(10)
+                      .toList();
 
                   if (pets.isEmpty) {
                     return const SliverToBoxAdapter(

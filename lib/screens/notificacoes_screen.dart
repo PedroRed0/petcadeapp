@@ -78,8 +78,7 @@ class _NotificacoesScreenState extends State<NotificacoesScreen> {
                     child: EstadoVazio(
                       icone: Icons.notifications_none_rounded,
                       titulo: 'Nenhuma notificação por enquanto',
-                      texto:
-                          'Quando alguém avistar um pet seu, você será avisado aqui.',
+                      texto: 'Quando alguém avistar um pet seu, você será avisado aqui.',
                     ),
                   ),
                 for (final n in _ultimas) ...[
@@ -261,71 +260,71 @@ class _CartaoDica extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
         child: Theme(
-        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
-        child: ExpansionTile(
-          tilePadding: EdgeInsets.zero,
-          childrenPadding: EdgeInsets.zero,
-          leading: Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: AppColors.laranja.withValues(alpha: 0.15),
-              shape: BoxShape.circle,
+          data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+          child: ExpansionTile(
+            tilePadding: EdgeInsets.zero,
+            childrenPadding: EdgeInsets.zero,
+            leading: Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: AppColors.laranja.withValues(alpha: 0.15),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.campaign_outlined,
+                size: 20,
+                color: AppColors.laranja,
+              ),
             ),
-            child: const Icon(
-              Icons.campaign_outlined,
-              size: 20,
-              color: AppColors.laranja,
+            title: Text(
+              'Dicas de busca',
+              style: GoogleFonts.poppins(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: AppColors.textoPrincipal,
+              ),
             ),
-          ),
-          title: Text(
-            'Dicas de busca',
-            style: GoogleFonts.poppins(
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-              color: AppColors.textoPrincipal,
+            subtitle: Text(
+              'Aumente as chances de encontrar seu pet',
+              style: GoogleFonts.poppins(
+                fontSize: 12,
+                color: AppColors.textoSecundario,
+              ),
             ),
-          ),
-          subtitle: Text(
-            'Aumente as chances de encontrar seu pet',
-            style: GoogleFonts.poppins(
-              fontSize: 12,
-              color: AppColors.textoSecundario,
-            ),
-          ),
-          iconColor: AppColors.laranja,
-          collapsedIconColor: AppColors.laranja,
-          children: [
-            for (final d in _dicas)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 6, left: 4),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Padding(
-                      padding: EdgeInsets.only(top: 6),
-                      child: Icon(
-                        Icons.circle,
-                        size: 5,
-                        color: AppColors.laranja,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        d,
-                        style: GoogleFonts.poppins(
-                          fontSize: 12.5,
-                          color: AppColors.textoPrincipal,
+            iconColor: AppColors.laranja,
+            collapsedIconColor: AppColors.laranja,
+            children: [
+              for (final d in _dicas)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 6, left: 4),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Padding(
+                        padding: EdgeInsets.only(top: 6),
+                        child: Icon(
+                          Icons.circle,
+                          size: 5,
+                          color: AppColors.laranja,
                         ),
                       ),
-                    ),
-                  ],
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          d,
+                          style: GoogleFonts.poppins(
+                            fontSize: 12.5,
+                            color: AppColors.textoPrincipal,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-          ],
+            ],
+          ),
         ),
-      ),
       ),
     );
   }

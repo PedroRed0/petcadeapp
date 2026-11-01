@@ -167,6 +167,7 @@ class _CartaoNotificacao extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Expanded(
                           child: Text(
@@ -177,16 +178,9 @@ class _CartaoNotificacao extends StatelessWidget {
                             ),
                           ),
                         ),
-                        Text(
-                          formatarTempoRelativo(n.criadoEm),
-                          style: GoogleFonts.poppins(
-                            fontSize: 11,
-                            color: AppColors.textoSecundario,
-                          ),
-                        ),
-                        if (!n.lida) ...[
-                          const SizedBox(width: 6),
+                        if (!n.lida)
                           Container(
+                            margin: const EdgeInsets.only(left: 6, top: 6),
                             width: 8,
                             height: 8,
                             decoration: const BoxDecoration(
@@ -194,7 +188,6 @@ class _CartaoNotificacao extends StatelessWidget {
                               shape: BoxShape.circle,
                             ),
                           ),
-                        ],
                       ],
                     ),
                     const SizedBox(height: 2),
@@ -202,6 +195,14 @@ class _CartaoNotificacao extends StatelessWidget {
                       n.mensagem,
                       style: GoogleFonts.poppins(
                         fontSize: 13,
+                        color: AppColors.textoSecundario,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      formatarTempoRelativo(n.criadoEm),
+                      style: GoogleFonts.poppins(
+                        fontSize: 11,
                         color: AppColors.textoSecundario,
                       ),
                     ),
@@ -215,12 +216,14 @@ class _CartaoNotificacao extends StatelessWidget {
                             color: AppColors.destaque(context),
                           ),
                           const SizedBox(width: 4),
-                          SelectableText(
-                            n.telefone,
-                            style: GoogleFonts.poppins(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                              color: AppColors.destaque(context),
+                          Flexible(
+                            child: SelectableText(
+                              n.telefone,
+                              style: GoogleFonts.poppins(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: AppColors.destaque(context),
+                              ),
                             ),
                           ),
                         ],
@@ -251,13 +254,13 @@ class _CartaoDica extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: AppColors.laranjaClaro,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Theme(
+    return Material(
+      color: AppColors.laranjaClaro,
+      borderRadius: BorderRadius.circular(16),
+      clipBehavior: Clip.antiAlias,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+        child: Theme(
         data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
         child: ExpansionTile(
           tilePadding: EdgeInsets.zero,
@@ -322,6 +325,7 @@ class _CartaoDica extends StatelessWidget {
               ),
           ],
         ),
+      ),
       ),
     );
   }

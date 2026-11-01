@@ -1,6 +1,5 @@
 import 'dart:typed_data';
 
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -14,10 +13,15 @@ import '../core/widgets/pet_card.dart';
 import '../models/pet.dart';
 import '../services/localizacao_service.dart';
 import '../services/pet_service.dart';
+import '../services/firebase_refs.dart';
 
 /// Cadastro em 4 etapas: Informações → Fotos → Localização → Confirmar
 class CadastroPetScreen extends StatefulWidget {
-  const CadastroPetScreen({super.key});
+  /// Só para os testes automáticos (começar já com fotos).
+  @visibleForTesting
+  final List<Uint8List> fotosIniciais;
+
+  const CadastroPetScreen({super.key, this.fotosIniciais = const []});
 
   @override
   State<CadastroPetScreen> createState() => _CadastroPetScreenState();
@@ -56,6 +60,7 @@ class _CadastroPetScreenState extends State<CadastroPetScreen> {
   void initState() {
     super.initState();
     _ponto = LocalizacaoService.instancia.posicao.value;
+    _fotos.addAll(widget.fotosIniciais);
   }
 
   @override
@@ -78,7 +83,7 @@ class _CadastroPetScreenState extends State<CadastroPetScreen> {
       double.tryParse(c.text.trim().replaceAll(',', '.'));
 
   Pet _montarPet() {
-    final user = FirebaseAuth.instance.currentUser;
+    final user = Fb.auth.currentUser;
     return Pet(
       nome: _nome.text.trim(),
       especie: _especie,

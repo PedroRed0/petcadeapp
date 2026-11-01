@@ -90,7 +90,9 @@ class _BarraInferior extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tema = Theme.of(context);
-    return Container(
+    return MediaQuery.withClampedTextScaling(
+      maxScaleFactor: 1.15,
+      child: Container(
       decoration: BoxDecoration(
         color: tema.colorScheme.surface,
         border: Border(top: BorderSide(color: tema.colorScheme.outline)),
@@ -138,6 +140,7 @@ class _BarraInferior extends StatelessWidget {
           ),
         ),
       ),
+    ),
     );
   }
 
@@ -163,15 +166,19 @@ class _BarraInferior extends StatelessWidget {
               child: Icon(ativo ? iconeAtivo : icone, color: cor, size: 22),
             ),
             const SizedBox(height: 2),
-            Text(
-              rotulo,
-              maxLines: 1,
-              overflow: TextOverflow.visible,
-              softWrap: false,
-              style: GoogleFonts.poppins(
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 2),
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  rotulo,
+                  maxLines: 1,
+                  style: GoogleFonts.poppins(
                 fontSize: 10.5,
-                fontWeight: ativo ? FontWeight.w600 : FontWeight.w400,
-                color: cor,
+                    fontWeight: ativo ? FontWeight.w600 : FontWeight.w400,
+                    color: cor,
+                  ),
+                ),
               ),
             ),
           ],

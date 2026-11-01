@@ -54,7 +54,13 @@ class PetCard extends StatelessWidget {
                   children: [
                     Row(
                       children: [
-                        SeloStatus(pet: pet),
+                        Flexible(
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            alignment: Alignment.centerLeft,
+                            child: SeloStatus(pet: pet),
+                          ),
+                        ),
                         const Spacer(),
                         if (mostrarSeta)
                           Icon(

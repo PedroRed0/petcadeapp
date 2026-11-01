@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../core/widgets/avatar_usuario.dart';
 import '../../core/widgets/comuns.dart';
 import '../../models/usuario.dart';
 import '../../services/usuario_service.dart';
@@ -18,6 +19,7 @@ class _EditarPerfilScreenState extends State<EditarPerfilScreen> {
   late final _nome = TextEditingController(text: widget.usuario.nome);
   late final _telefone = TextEditingController(text: widget.usuario.telefone);
   bool _salvando = false;
+  late final Stream<Usuario?> _usuario = UsuarioService().usuarioAtual();
 
   @override
   void dispose() {
@@ -54,6 +56,22 @@ class _EditarPerfilScreenState extends State<EditarPerfilScreen> {
         child: ListView(
           padding: const EdgeInsets.all(20),
           children: [
+            Center(
+              child: StreamBuilder<Usuario?>(
+                stream: _usuario,
+                initialData: widget.usuario,
+                builder: (context, snap) =>
+                    AvatarEditavel(usuario: snap.data, raio: 46),
+              ),
+            ),
+            const SizedBox(height: 6),
+            Center(
+              child: TextButton(
+                onPressed: () => trocarFotoPerfil(context, widget.usuario),
+                child: const Text('Trocar foto'),
+              ),
+            ),
+            const SizedBox(height: 12),
             TextFormField(
               controller: _nome,
               textCapitalization: TextCapitalization.words,

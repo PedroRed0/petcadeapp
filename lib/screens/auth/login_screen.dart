@@ -22,6 +22,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   bool _senhaVisivel = false;
   bool _carregando = false;
+  bool _carregandoGoogle = false;
 
   @override
   void dispose() {
@@ -40,6 +41,18 @@ class _LoginScreenState extends State<LoginScreen> {
       if (mounted) mostrarAviso(context, AuthService.mensagemErro(e));
     } finally {
       if (mounted) setState(() => _carregando = false);
+    }
+  }
+
+  Future<void> _entrarComGoogle() async {
+    setState(() => _carregandoGoogle = true);
+    try {
+      await _auth.entrarComGoogle();
+      // Se entrou, o AuthGate troca de tela sozinho.
+    } catch (e) {
+      if (mounted) mostrarAviso(context, AuthService.mensagemErro(e));
+    } finally {
+      if (mounted) setState(() => _carregandoGoogle = false);
     }
   }
 
@@ -171,9 +184,41 @@ class _LoginScreenState extends State<LoginScreen> {
                         style: TextButton.styleFrom(foregroundColor: branco70),
                         child: const Text('Esqueci minha senha'),
                       ),
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 12),
                       Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Expanded(
+                            child: Divider(
+                              color: Colors.white.withValues(alpha: 0.3),
+                            ),
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            child: Text(
+                              'ou',
+                              style: GoogleFonts.poppins(
+                                fontSize: 13,
+                                color: branco70,
+                              ),
+                            ),
+                          ),
+                          Expanded(
+                            child: Divider(
+                              color: Colors.white.withValues(alpha: 0.3),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 20),
+                      _BotaoGoogle(
+                        carregando: _carregandoGoogle,
+                        onPressed: _carregando || _carregandoGoogle
+                            ? null
+                            : _entrarComGoogle,
+                      ),
+                      const SizedBox(height: 28),
+                      Wrap(
+                        alignment: WrapAlignment.center,
                         children: [
                           Text(
                             'Não tem conta? ',
@@ -230,4 +275,84 @@ class _LoginScreenState extends State<LoginScreen> {
       errorStyle: GoogleFonts.poppins(color: AppColors.laranjaClaro),
     );
   }
+}
+
+/// Botão branco "Entrar com Google" com o "G" colorido.
+class _BotaoGoogle extends StatelessWidget {
+  final bool carregando;
+  final VoidCallback? onPressed;
+
+  const _BotaoGoogle({required this.carregando, required this.onPressed});
+
+  @override
+  Widget build(BuildContext context) {
+    return ElevatedButton(
+      onPressed: onPressed,
+      style: ElevatedButton.styleFrom(
+        backgroundColor: Colors.white,
+        foregroundColor: AppColors.textoPrincipal,
+        disabledBackgroundColor: Colors.white.withValues(alpha: 0.8),
+        disabledForegroundColor: AppColors.textoSecundario,
+      ),
+      child: carregando
+          ? const SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            )
+          : Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CustomPaint(painter: _LogoGoogle()),
+                ),
+                const SizedBox(width: 10),
+                Flexible(
+                  child: Text(
+                    'Entrar com Google',
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.poppins(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+    );
+  }
+}
+
+/// Desenha o "G" do Google com as quatro cores.
+class _LogoGoogle extends CustomPainter {
+  const _LogoGoogle();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final s = size.width;
+    final traco = s * 0.2;
+    final rect = Rect.fromCircle(
+      center: Offset(s / 2, s / 2),
+      radius: (s - traco) / 2,
+    );
+    Paint cor(int c) => Paint()
+      ..color = Color(c)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = traco;
+    const grau = 3.14159265 / 180;
+    canvas.drawArc(rect, -40 * grau, -100 * grau, false, cor(0xFFEA4335));
+    canvas.drawArc(rect, -140 * grau, -90 * grau, false, cor(0xFFFBBC05));
+    canvas.drawArc(rect, -230 * grau, -95 * grau, false, cor(0xFF34A853));
+    canvas.drawArc(rect, -325 * grau, -35 * grau, false, cor(0xFF4285F4));
+    // barra horizontal azul
+    canvas.drawRect(
+      Rect.fromLTWH(s / 2, s / 2 - traco / 2, s / 2 - traco / 4, traco),
+      Paint()..color = const Color(0xFF4285F4),
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

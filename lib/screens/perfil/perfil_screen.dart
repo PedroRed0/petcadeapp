@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../core/theme/app_colors.dart';
+import '../../core/widgets/avatar_usuario.dart';
 import '../../core/widgets/comuns.dart';
 import '../../models/pet.dart';
 import '../../models/usuario.dart';
@@ -60,20 +61,7 @@ class _PerfilScreenState extends State<PerfilScreen> {
             children: [
               Row(
                 children: [
-                  CircleAvatar(
-                    radius: 34,
-                    backgroundColor: AppColors.fundoDestaque(context),
-                    child: Text(
-                      (u?.nome.isNotEmpty ?? false)
-                          ? u!.nome.trim()[0].toUpperCase()
-                          : '?',
-                      style: GoogleFonts.poppins(
-                        fontSize: 26,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.destaque(context),
-                      ),
-                    ),
-                  ),
+                  AvatarEditavel(usuario: u),
                   const SizedBox(width: 16),
                   Expanded(
                     child: Column(
@@ -81,6 +69,8 @@ class _PerfilScreenState extends State<PerfilScreen> {
                       children: [
                         Text(
                           u?.nome.isNotEmpty == true ? u!.nome : 'Usuário',
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
                           style: GoogleFonts.poppins(
                             fontSize: 19,
                             fontWeight: FontWeight.w700,
@@ -88,6 +78,8 @@ class _PerfilScreenState extends State<PerfilScreen> {
                         ),
                         Text(
                           u?.email ?? '',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                           style: GoogleFonts.poppins(
                             fontSize: 13,
                             color: AppColors.textoSecundario,

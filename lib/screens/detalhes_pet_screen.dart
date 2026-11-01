@@ -1,4 +1,3 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:share_plus/share_plus.dart';
@@ -14,6 +13,7 @@ import '../services/localizacao_service.dart';
 import '../services/notificacao_service.dart';
 import '../services/pet_service.dart';
 import '../services/usuario_service.dart';
+import '../services/firebase_refs.dart';
 
 void abrirDetalhesPet(BuildContext context, Pet pet) {
   Navigator.push(
@@ -52,7 +52,7 @@ class _DetalhesPetScreenState extends State<DetalhesPetScreen> {
     super.dispose();
   }
 
-  String get _meuUid => FirebaseAuth.instance.currentUser?.uid ?? '';
+  String get _meuUid => Fb.auth.currentUser?.uid ?? '';
 
   void _compartilhar(Pet pet) {
     final linhas = [
@@ -204,12 +204,14 @@ class _DetalhesPetScreenState extends State<DetalhesPetScreen> {
                               color: AppColors.laranja,
                             ),
                             const SizedBox(width: 10),
-                            Text(
-                              'Recompensa de R\$ ${pet.recompensa!.toStringAsFixed(0)}',
-                              style: GoogleFonts.poppins(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.textoPrincipal,
+                            Expanded(
+                              child: Text(
+                                'Recompensa de R\$ ${pet.recompensa!.toStringAsFixed(0)}',
+                                style: GoogleFonts.poppins(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.textoPrincipal,
+                                ),
                               ),
                             ),
                           ],
@@ -236,30 +238,46 @@ class _DetalhesPetScreenState extends State<DetalhesPetScreen> {
               padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
               child: Row(
                 children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
+                  SizedBox(
+                    width: 52,
+                    height: 52,
+                    child: OutlinedButton(
                       onPressed: () => _compartilhar(pet),
-                      icon: const Icon(Icons.share_outlined, size: 18),
-                      label: const Text('Compartilhar'),
-                    ),
-                  ),
-                  if (pet.perdido) ...[
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        onPressed: () => souDono
-                            ? _marcarEncontrado(pet)
-                            : _informarAvistamento(pet),
-                        icon: Icon(
-                          souDono
-                              ? Icons.check_circle_outline_rounded
-                              : Icons.visibility_outlined,
-                          size: 18,
-                        ),
-                        label: Text(souDono ? 'Encontrado' : 'Eu vi este pet'),
+                      style: OutlinedButton.styleFrom(
+                        padding: EdgeInsets.zero,
+                        minimumSize: const Size(52, 52),
+                        shape: const CircleBorder(),
+                      ),
+                      child: const Tooltip(
+                        message: 'Compartilhar',
+                        child: Icon(Icons.share_outlined, size: 20),
                       ),
                     ),
-                  ],
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: pet.perdido
+                        ? ElevatedButton(
+                            onPressed: () => souDono
+                                ? _marcarEncontrado(pet)
+                                : _informarAvistamento(pet),
+                            child: _RotuloBotao(
+                              icone: souDono
+                                  ? Icons.check_circle_outline_rounded
+                                  : Icons.visibility_outlined,
+                              texto: souDono
+                                  ? 'Marcar como encontrado'
+                                  : 'Eu vi este pet',
+                            ),
+                          )
+                        : OutlinedButton(
+                            onPressed: () => _compartilhar(pet),
+                            child: const _RotuloBotao(
+                              icone: Icons.share_outlined,
+                              texto: 'Compartilhar',
+                            ),
+                          ),
+                  ),
                 ],
               ),
             ),
@@ -353,6 +371,29 @@ class _DetalhesPetScreenState extends State<DetalhesPetScreen> {
   );
 }
 
+/// Ícone + texto que diminui para caber no botão (nunca quebra).
+class _RotuloBotao extends StatelessWidget {
+  final IconData icone;
+  final String texto;
+
+  const _RotuloBotao({required this.icone, required this.texto});
+
+  @override
+  Widget build(BuildContext context) {
+    return FittedBox(
+      fit: BoxFit.scaleDown,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icone, size: 18),
+          const SizedBox(width: 8),
+          Text(texto, maxLines: 1),
+        ],
+      ),
+    );
+  }
+}
+
 /// Linha com Espécie · Peso · Sexo · Porte
 class _Atributos extends StatelessWidget {
   final Pet pet;
@@ -366,7 +407,7 @@ class _Atributos extends StatelessWidget {
       if (pet.peso != null)
         (
           Icons.monitor_weight_outlined,
-          '${pet.peso!.toStringAsFixed(pet.peso! % 1 == 0 ? 0 : 1)} kg',
+          '${pet.peso!.toStringAsFixed(pet.peso! % 1 == 0 ? 0 : 1).replaceAll('.', ',')} kg',
         ),
       if (pet.sexo.isNotEmpty)
         (
@@ -397,12 +438,18 @@ class _Atributos extends StatelessWidget {
                 children: [
                   Icon(itens[i].$1, size: 18, color: AppColors.destaque(context)),
                   const SizedBox(height: 4),
-                  Text(
-                    itens[i].$2,
-                    textAlign: TextAlign.center,
-                    style: GoogleFonts.poppins(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        itens[i].$2,
+                        maxLines: 1,
+                        style: GoogleFonts.poppins(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
                     ),
                   ),
                 ],

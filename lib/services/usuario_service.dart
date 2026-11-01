@@ -1,13 +1,16 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 
 import '../models/usuario.dart';
+import 'firebase_refs.dart';
 
 class UsuarioService {
   CollectionReference<Map<String, dynamic>> get _colecao =>
-      FirebaseFirestore.instance.collection('usuarios');
+      Fb.db.collection('usuarios');
 
-  String? get uid => FirebaseAuth.instance.currentUser?.uid;
+  String? get uid => Fb.auth.currentUser?.uid;
 
   /// Dados do usuário logado, em tempo real.
   Stream<Usuario?> usuarioAtual() {
@@ -16,11 +19,12 @@ class UsuarioService {
     return _colecao.doc(id).snapshots().map((doc) {
       if (doc.exists) return Usuario.fromDocument(doc);
       // Conta criada antes desta versão: monta com o que o Auth sabe.
-      final u = FirebaseAuth.instance.currentUser;
+      final u = Fb.auth.currentUser;
       return Usuario(
         uid: id,
         nome: u?.displayName ?? '',
         email: u?.email ?? '',
+        fotoUrl: u?.photoURL ?? '',
       );
     });
   }
@@ -31,11 +35,25 @@ class UsuarioService {
   }) async {
     final id = uid;
     if (id == null) return;
-    await FirebaseAuth.instance.currentUser?.updateDisplayName(nome.trim());
+    await Fb.auth.currentUser?.updateDisplayName(nome.trim());
     await _colecao.doc(id).set({
       'nome': nome.trim(),
       'telefone': telefone.trim(),
-      'email': FirebaseAuth.instance.currentUser?.email ?? '',
+      'email': Fb.auth.currentUser?.email ?? '',
+    }, SetOptions(merge: true));
+  }
+
+  /// Troca a foto de perfil (já reduzida). Passe null para remover.
+  Future<void> atualizarFoto(Uint8List? bytes) async {
+    final id = uid;
+    if (id == null) return;
+    if (bytes != null && bytes.lengthInBytes > 150 * 1024) {
+      throw Exception('Foto muito grande. Escolha outra imagem.');
+    }
+    await _colecao.doc(id).set({
+      'foto': bytes == null ? '' : base64Encode(bytes),
+      // Ao remover, também esquece a foto do Google.
+      if (bytes == null) 'fotoUrl': '',
     }, SetOptions(merge: true));
   }
 

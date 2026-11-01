@@ -5,10 +5,11 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../models/notificacao.dart';
 import '../models/pet.dart';
+import 'firebase_refs.dart';
 
 class PetService {
   CollectionReference<Map<String, dynamic>> get _colecaoPets =>
-      FirebaseFirestore.instance.collection('pets_perdidos');
+      Fb.db.collection('pets_perdidos');
 
   /// Um documento do Firestore aceita no máximo 1 MB no total.
   static const int maxFotos = 3;
@@ -62,12 +63,12 @@ class PetService {
   Future<void> marcarEncontrado(Pet pet) async {
     await _colecaoPets.doc(pet.id).update({'status': Pet.statusEncontrado});
 
-    final quemSalvou = await FirebaseFirestore.instance
+    final quemSalvou = await Fb.db
         .collection('usuarios')
         .where('favoritos', arrayContains: pet.id)
         .get();
-    final lote = FirebaseFirestore.instance.batch();
-    final notificacoes = FirebaseFirestore.instance.collection('notificacoes');
+    final lote = Fb.db.batch();
+    final notificacoes = Fb.db.collection('notificacoes');
     for (final u in quemSalvou.docs) {
       if (u.id == pet.donoId) continue;
       lote.set(notificacoes.doc(), {

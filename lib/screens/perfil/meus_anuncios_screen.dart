@@ -1,5 +1,7 @@
+import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter/material.dart';
 
+import '../../core/theme/app_colors.dart';
 import '../../core/widgets/comuns.dart';
 import '../../core/widgets/pet_card.dart';
 import '../../models/pet.dart';
@@ -128,32 +130,16 @@ class _MeusAnunciosScreenState extends State<MeusAnunciosScreen> {
                 padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
                 child: Row(
                   children: [
-                    Expanded(
-                      child: ChoiceChip(
-                        label: SizedBox(
-                          width: double.infinity,
-                          child: Text(
-                            'Ativos (${ativos.length})',
-                            textAlign: TextAlign.center,
-                          ),
-                        ),
-                        selected: _ativos,
-                        onSelected: (_) => setState(() => _ativos = true),
-                      ),
+                    _AbaAnuncios(
+                      texto: 'Ativos (${ativos.length})',
+                      selecionada: _ativos,
+                      onTap: () => setState(() => _ativos = true),
                     ),
                     const SizedBox(width: 10),
-                    Expanded(
-                      child: ChoiceChip(
-                        label: SizedBox(
-                          width: double.infinity,
-                          child: Text(
-                            'Finalizados (${finalizados.length})',
-                            textAlign: TextAlign.center,
-                          ),
-                        ),
-                        selected: !_ativos,
-                        onSelected: (_) => setState(() => _ativos = false),
-                      ),
+                    _AbaAnuncios(
+                      texto: 'Finalizados (${finalizados.length})',
+                      selecionada: !_ativos,
+                      onTap: () => setState(() => _ativos = false),
                     ),
                   ],
                 ),
@@ -186,6 +172,59 @@ class _MeusAnunciosScreenState extends State<MeusAnunciosScreen> {
             ],
           );
         },
+      ),
+    );
+  }
+}
+
+/// Metade do seletor "Ativos | Finalizados".
+class _AbaAnuncios extends StatelessWidget {
+  final String texto;
+  final bool selecionada;
+  final VoidCallback onTap;
+
+  const _AbaAnuncios({
+    required this.texto,
+    required this.selecionada,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final tema = Theme.of(context);
+    return Expanded(
+      child: Material(
+        color: selecionada ? AppColors.laranja : tema.colorScheme.surface,
+        shape: StadiumBorder(
+          side: BorderSide(
+            color: selecionada ? AppColors.laranja : tema.colorScheme.outline,
+          ),
+        ),
+        child: InkWell(
+          customBorder: const StadiumBorder(),
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+            child: Center(
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Text(
+                  texto,
+                  maxLines: 1,
+                  style: GoogleFonts.poppins(
+                    fontSize: 13,
+                    fontWeight: selecionada
+                        ? FontWeight.w600
+                        : FontWeight.w400,
+                    color: selecionada
+                        ? Colors.white
+                        : tema.colorScheme.onSurface,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }

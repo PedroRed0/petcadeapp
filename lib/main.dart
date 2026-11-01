@@ -30,15 +30,31 @@ class PetCadeApp extends StatelessWidget {
           darkTheme: AppTheme.dark,
           themeMode: modoAtual,
           // Fonte do celular muito grande quebra o layout: limitamos a 1.3x.
-          builder: (context, child) => MediaQuery.withClampedTextScaling(
-            maxScaleFactor: 1.3,
-            child: child!,
-          ),
+          builder: envolverApp,
           home: const AuthGate(),
         );
       },
     );
   }
+}
+
+/// Aplicado a todas as telas do app:
+/// - limita o zoom de fonte do sistema a 1.3x (fonte enorme quebra o layout);
+/// - no Android 15+ o app é desenhado por baixo da barra de navegação
+///   (◁ ○ ▢). Aqui reservamos esse espaço, para nenhum botão ficar atrás dela.
+Widget envolverApp(BuildContext context, Widget? child) {
+  return ColoredBox(
+    color: Theme.of(context).scaffoldBackgroundColor,
+    child: SafeArea(
+      top: false,
+      left: false,
+      right: false,
+      child: MediaQuery.withClampedTextScaling(
+        maxScaleFactor: 1.3,
+        child: child!,
+      ),
+    ),
+  );
 }
 
 /// Mostra o login ou o app, conforme o usuário esteja logado.

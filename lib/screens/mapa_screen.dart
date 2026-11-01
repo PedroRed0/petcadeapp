@@ -55,8 +55,7 @@ class _MapaScreenState extends State<MapaScreen> {
   void _abrirPreview(Pet pet) {
     abrirJanela(
       context: context,
-      showDragHandle: false,
-      backgroundColor: Colors.transparent,
+      telaCheia: false,
       builder: (_) => _PreviewPet(pet: pet),
     );
   }
@@ -262,65 +261,101 @@ class _PreviewPet extends StatelessWidget {
 
   const _PreviewPet({required this.pet});
 
+  void _abrirDetalhes(BuildContext context) {
+    final navegador = Navigator.of(context);
+    navegador.pop();
+    navegador.push(
+      MaterialPageRoute(builder: (_) => DetalhesPetScreen(pet: pet)),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final d = LocalizacaoService.instancia.distanciaAte(pet);
-    return SafeArea(
-      child: Container(
-        margin: const EdgeInsets.all(16),
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: InkWell(
-          onTap: () {
-            final navegador = Navigator.of(context);
-            navegador.pop();
-            navegador.push(
-              MaterialPageRoute(builder: (_) => DetalhesPetScreen(pet: pet)),
-            );
-          },
-          child: Row(
+    final secundario = GoogleFonts.poppins(
+      fontSize: 12,
+      color: AppColors.textoSecundario,
+    );
+
+    Widget info(IconData icone, String texto) => Padding(
+      padding: const EdgeInsets.only(top: 3),
+      child: Row(
+        children: [
+          Icon(icone, size: 14, color: AppColors.textoSecundario),
+          const SizedBox(width: 4),
+          Expanded(
+            child: Text(
+              texto,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: secundario,
+            ),
+          ),
+        ],
+      ),
+    );
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: PetFoto(pet: pet, width: 72, height: 72),
+                borderRadius: BorderRadius.circular(14),
+                child: PetFoto(pet: pet, width: 88, height: 88),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 14),
               Expanded(
                 child: Column(
+                  mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     SeloStatus(pet: pet),
-                    const SizedBox(height: 2),
+                    const SizedBox(height: 4),
                     Text(
-                      pet.nome,
+                      pet.nome.isEmpty ? 'Sem nome' : pet.nome,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: GoogleFonts.poppins(
-                        fontSize: 15,
+                        fontSize: 17,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
-                    Text(
-                      [
+                    if (pet.especieRaca.isNotEmpty)
+                      Text(
                         pet.especieRaca,
-                        if (d != null) formatarDistancia(d),
-                      ].where((s) => s.isNotEmpty).join(' · '),
-                      style: GoogleFonts.poppins(
-                        fontSize: 12,
-                        color: AppColors.textoSecundario,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: GoogleFonts.poppins(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                          color: AppColors.destaque(context),
+                        ),
                       ),
+                    if (pet.localizacao.isNotEmpty)
+                      info(Icons.location_on_outlined, pet.localizacao),
+                    info(
+                      Icons.schedule_rounded,
+                      [
+                        'Visto em ${formatarData(pet.vistoEm)}',
+                        if (d != null) '${formatarDistancia(d)} de você',
+                      ].join(' · '),
                     ),
                   ],
                 ),
               ),
-              const Icon(
-                Icons.chevron_right_rounded,
-                color: AppColors.textoSecundario,
-              ),
             ],
           ),
-        ),
+          const SizedBox(height: 16),
+          ElevatedButton(
+            onPressed: () => _abrirDetalhes(context),
+            child: const Text('Ver detalhes'),
+          ),
+        ],
       ),
     );
   }

@@ -60,8 +60,13 @@ class Pet {
   bool get temLocal => latitude != 0 || longitude != 0;
 
   /// "Cachorro - Pug"
-  String get especieRaca =>
-      [especie, raca].where((s) => s.trim().isNotEmpty).join(' - ');
+  String get especieRaca {
+    final r = raca.trim();
+    if (r.isEmpty || r.toLowerCase() == especie.trim().toLowerCase()) {
+      return especie;
+    }
+    return especie.isEmpty ? r : '$especie - $r';
+  }
 
   Map<String, dynamic> toMap() {
     return {

@@ -6,10 +6,14 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fake_cloud_firestore/fake_cloud_firestore.dart';
 import 'package:firebase_auth_mocks/firebase_auth_mocks.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import 'package:petcade/core/theme/app_theme.dart';
+import 'package:petcade/main.dart';
+import 'package:petcade/screens/mapa_screen.dart';
 import 'package:petcade/models/pet.dart';
 import 'package:petcade/screens/animais_perdidos_screen.dart';
 import 'package:petcade/screens/buscar_screen.dart';
@@ -26,6 +30,7 @@ import 'package:petcade/screens/perfil/meus_anuncios_screen.dart';
 import 'package:petcade/screens/texto_screen.dart';
 import 'package:petcade/models/usuario.dart';
 import 'package:petcade/services/firebase_refs.dart';
+import 'package:petcade/services/localizacao_service.dart';
 
 const _png =
     'iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAIAAAAmkwkpAAAAEElEQVR4nGP43yUPRwzEcQC/UhqBZFbBrwAAAABJRU5ErkJggg==';
@@ -153,7 +158,7 @@ Future<void> _abrir(
       builder: (context, child) => MediaQuery(
         data: MediaQuery.of(context)
             .copyWith(textScaler: TextScaler.linear(escala)),
-        child: child!,
+        child: envolverApp(context, child),
       ),
       home: tela,
     ),
@@ -314,6 +319,41 @@ void main() {
         Navigator.of(t.element(find.text(ultimaOpcao).last)).pop();
         await _esperar(t);
       }
+    });
+  }
+
+  // Erros enviados pelo Pedro na tela do mapa: filtros atrás da barra do
+  // Android e card do pet esticado na tela inteira.
+  for (final MapEntry(key: nomeTam, value: tamanho) in _tamanhos.entries) {
+    testWidgets('Mapa: filtros e card do pet ($nomeTam)', (t) async {
+      await _prepararFirebase();
+      const barra = 48.0;
+      t.view.padding = const FakeViewPadding(bottom: barra);
+      t.view.viewPadding = const FakeViewPadding(bottom: barra);
+      // "minha posição" perto da Mia, para o pin aparecer no mapa
+      LocalizacaoService.instancia.posicao.value = const LatLng(-23.55, -46.60);
+      addTearDown(() => LocalizacaoService.instancia.posicao.value = null);
+      await _abrir(t, const MapaScreen(), tamanho, 1.0);
+      final limite = tamanho.height - barra;
+      expect(t.getRect(find.text('Gatos')).bottom, lessThanOrEqualTo(limite));
+      expect(
+        t.getRect(find.byIcon(Icons.my_location_rounded)).bottom,
+        lessThanOrEqualTo(limite),
+      );
+
+      // toca no primeiro pin do mapa
+      final pin = find.descendant(
+        of: find.byType(MarkerLayer),
+        matching: find.byType(GestureDetector),
+      );
+      t.widget<GestureDetector>(pin.first).onTap!();
+      await _esperar(t);
+      final botao = find.text('Ver detalhes');
+      expect(botao, findsOneWidget);
+      expect(t.getRect(botao).bottom, lessThanOrEqualTo(limite));
+      // o card deve ter só o tamanho do conteúdo (não a tela toda)
+      final topoCard = t.getRect(find.byType(BottomSheet)).top;
+      expect(topoCard, greaterThan(tamanho.height * 0.35));
     });
   }
 }

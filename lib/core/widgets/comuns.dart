@@ -284,10 +284,11 @@ Future<T?> abrirJanela<T>({
   required WidgetBuilder builder,
   bool showDragHandle = true,
   Color? backgroundColor,
+  bool telaCheia = true,
 }) {
   return showModalBottomSheet<T>(
     context: context,
-    isScrollControlled: true,
+    isScrollControlled: telaCheia,
     useSafeArea: true,
     showDragHandle: showDragHandle,
     backgroundColor: backgroundColor,

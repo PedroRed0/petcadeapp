@@ -1,12 +1,13 @@
 {
-    "name": "petcade",
-    "short_name": "petcade",
+    "name": "PetCadê",
+    "short_name": "PetCadê",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#5B3FA3",
+    "theme_color": "#5B3FA3",
+    "description": "Juntos por eles: encontre e ajude a encontrar animais perdidos.",
     "orientation": "portrait-primary",
+    "lang": "pt-BR",
     "prefer_related_applications": false,
     "icons": [
         {

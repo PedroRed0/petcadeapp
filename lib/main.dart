@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 
+import 'core/theme/app_colors.dart';
 import 'core/theme/app_theme.dart';
 import 'core/theme/theme_controller.dart';
 import 'firebase_options.dart';
@@ -43,7 +44,7 @@ class PetCadeApp extends StatelessWidget {
 /// - no Android 15+ o app é desenhado por baixo da barra de navegação
 ///   (◁ ○ ▢). Aqui reservamos esse espaço, para nenhum botão ficar atrás dela.
 Widget envolverApp(BuildContext context, Widget? child) {
-  return ColoredBox(
+  final app = ColoredBox(
     color: Theme.of(context).scaffoldBackgroundColor,
     child: SafeArea(
       top: false,
@@ -52,6 +53,24 @@ Widget envolverApp(BuildContext context, Widget? child) {
       child: MediaQuery.withClampedTextScaling(
         maxScaleFactor: 1.3,
         child: child!,
+      ),
+    ),
+  );
+  // No navegador de um computador (ou no projetor da apresentação), mostra
+  // o app com largura de celular, centralizado.
+  final largura = MediaQuery.sizeOf(context).width;
+  if (largura <= 600) return app;
+  return ColoredBox(
+    color: AppColors.roxoEscuro,
+    child: Center(
+      child: SizedBox(
+        width: 440,
+        child: MediaQuery(
+          data: MediaQuery.of(context).copyWith(
+            size: Size(440, MediaQuery.sizeOf(context).height),
+          ),
+          child: ClipRect(child: app),
+        ),
       ),
     ),
   );

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:share_plus/share_plus.dart';
 
@@ -67,7 +68,13 @@ class _DetalhesPetScreenState extends State<DetalhesPetScreen> {
       '',
       'Viu esse pet? Avise pelo app PetCadê!',
     ];
-    SharePlus.instance.share(ShareParams(text: linhas.join('\n')));
+    final texto = linhas.join('\n');
+    SharePlus.instance.share(ShareParams(text: texto)).catchError((_) async {
+      // Navegadores sem a função "compartilhar": copia o texto.
+      await Clipboard.setData(ClipboardData(text: texto));
+      if (mounted) mostrarAviso(context, 'Texto do anúncio copiado!');
+      return const ShareResult('', ShareResultStatus.unavailable);
+    });
   }
 
   Future<void> _informarAvistamento(Pet pet) async {

@@ -20,7 +20,7 @@ Thumbs.db
 **/android/key.properties
 *.jks
 # Testes das regras do Firestore (node)
-test_regras/node_modules/
+test_regras/node_modules
 firebase-debug.log
 firestore-debug.log
 .firebase/

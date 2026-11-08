@@ -84,6 +84,18 @@ class PetService {
     await lote.commit();
   }
 
+  /// Corrige onde o pet foi visto.
+  Future<void> atualizarLocal(
+    Pet pet, {
+    required String localizacao,
+    required double latitude,
+    required double longitude,
+  }) => _colecaoPets.doc(pet.id).update({
+    'localizacao': localizacao,
+    'latitude': latitude,
+    'longitude': longitude,
+  });
+
   Future<void> reativar(Pet pet) =>
       _colecaoPets.doc(pet.id).update({'status': Pet.statusPerdido});
 

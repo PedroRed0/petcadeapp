@@ -9,6 +9,7 @@ import '../../services/pet_service.dart';
 import '../../services/usuario_service.dart';
 import '../cadastro_pet_screen.dart';
 import '../detalhes_pet_screen.dart';
+import 'alterar_local_screen.dart';
 
 class MeusAnunciosScreen extends StatefulWidget {
   const MeusAnunciosScreen({super.key});
@@ -38,6 +39,11 @@ class _MeusAnunciosScreenState extends State<MeusAnunciosScreen> {
               leading: const Icon(Icons.visibility_outlined, size: 20),
               title: const Text('Ver anúncio'),
               onTap: () => Navigator.pop(context, 'ver'),
+            ),
+            ListTile(
+              leading: const Icon(Icons.edit_location_alt_outlined, size: 20),
+              title: const Text('Alterar localização'),
+              onTap: () => Navigator.pop(context, 'local'),
             ),
             if (pet.perdido)
               ListTile(
@@ -69,6 +75,11 @@ class _MeusAnunciosScreenState extends State<MeusAnunciosScreen> {
       switch (acao) {
         case 'ver':
           abrirDetalhesPet(context, pet);
+        case 'local':
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => AlterarLocalScreen(pet: pet)),
+          );
         case 'encontrado':
           await servico.marcarEncontrado(pet);
           if (mounted) mostrarAviso(context, 'Que ótima notícia! 🎉');

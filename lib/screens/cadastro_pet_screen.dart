@@ -1,7 +1,6 @@
 import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_map/flutter_map.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:latlong2/latlong.dart';
@@ -10,8 +9,9 @@ import '../core/theme/app_colors.dart';
 import '../core/utils/formatos.dart';
 import '../core/widgets/comuns.dart';
 import '../core/widgets/pet_card.dart';
+import '../core/widgets/seletor_local.dart';
 import '../models/pet.dart';
-import '../services/localizacao_service.dart';
+import '../services/endereco_service.dart';
 import '../services/pet_service.dart';
 import '../services/firebase_refs.dart';
 
@@ -21,7 +21,15 @@ class CadastroPetScreen extends StatefulWidget {
   @visibleForTesting
   final List<Uint8List> fotosIniciais;
 
-  const CadastroPetScreen({super.key, this.fotosIniciais = const []});
+  /// Só para os testes automáticos (busca de endereço simulada).
+  @visibleForTesting
+  final EnderecoService? enderecoService;
+
+  const CadastroPetScreen({
+    super.key,
+    this.fotosIniciais = const [],
+    this.enderecoService,
+  });
 
   @override
   State<CadastroPetScreen> createState() => _CadastroPetScreenState();
@@ -52,14 +60,13 @@ class _CadastroPetScreenState extends State<CadastroPetScreen> {
   // Etapa 3
   final _formLocal = GlobalKey<FormState>();
   final _localizacao = TextEditingController();
-  final _mapa = MapController();
+  final _seletor = GlobalKey<SeletorLocalState>();
   LatLng? _ponto;
   DateTime _vistoEm = DateTime.now();
 
   @override
   void initState() {
     super.initState();
-    _ponto = LocalizacaoService.instancia.posicao.value;
     _fotos.addAll(widget.fotosIniciais);
   }
 
@@ -105,7 +112,7 @@ class _CadastroPetScreenState extends State<CadastroPetScreen> {
     );
   }
 
-  void _proximo() {
+  Future<void> _proximo() async {
     FocusScope.of(context).unfocus();
     switch (_etapa) {
       case 0:
@@ -117,8 +124,14 @@ class _CadastroPetScreenState extends State<CadastroPetScreen> {
         }
       case 2:
         if (!_formLocal.currentState!.validate()) return;
-        if (_ponto == null) {
-          mostrarAviso(context, 'Toque no mapa para marcar onde foi visto.');
+        // Se a pessoa só digitou o bairro, localiza no mapa sozinho.
+        final ok = await _seletor.currentState?.garantirPonto() ?? false;
+        if (!mounted) return;
+        if (!ok || _ponto == null) {
+          mostrarAviso(
+            context,
+            'Não achamos esse local no mapa. Use o CEP ou toque no mapa.',
+          );
           return;
         }
       case 3:
@@ -179,17 +192,6 @@ class _CadastroPetScreenState extends State<CadastroPetScreen> {
     } catch (e) {
       if (mounted) mostrarAviso(context, 'Não foi possível abrir a foto.');
     }
-  }
-
-  Future<void> _usarMinhaLocalizacao() async {
-    final p = await LocalizacaoService.instancia.atualizar();
-    if (!mounted) return;
-    if (p == null) {
-      mostrarAviso(context, 'Não foi possível obter sua localização.');
-      return;
-    }
-    setState(() => _ponto = p);
-    _mapa.move(p, 16);
   }
 
   Future<void> _escolherDataHora() async {
@@ -519,7 +521,6 @@ class _CadastroPetScreenState extends State<CadastroPetScreen> {
 
   // ---------- Etapa 3 ----------
   Widget _etapaLocalizacao() {
-    final tema = Theme.of(context);
     return Form(
       key: _formLocal,
       child: ListView(
@@ -539,64 +540,12 @@ class _CadastroPetScreenState extends State<CadastroPetScreen> {
               ),
             ),
           ),
-          _rotulo('Bairro / cidade'),
-          TextFormField(
-            controller: _localizacao,
-            textCapitalization: TextCapitalization.words,
-            decoration: const InputDecoration(
-              hintText: 'Ex.: Itaquera - SP',
-              prefixIcon: Icon(Icons.location_on_outlined, size: 20),
-            ),
-            validator: (v) =>
-                (v ?? '').trim().isEmpty ? 'Campo obrigatório' : null,
-          ),
-          _rotulo('Toque no mapa para marcar o local'),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(16),
-            child: Container(
-              height: 240,
-              decoration: BoxDecoration(
-                border: Border.all(color: tema.colorScheme.outline),
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: FlutterMap(
-                mapController: _mapa,
-                options: MapOptions(
-                  initialCenter: _ponto ?? LocalizacaoService.padrao,
-                  initialZoom: _ponto == null ? 11 : 15,
-                  onTap: (_, p) => setState(() => _ponto = p),
-                ),
-                children: [
-                  TileLayer(
-                    urlTemplate:
-                        'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                    userAgentPackageName: 'com.example.petcade',
-                  ),
-                  if (_ponto != null)
-                    MarkerLayer(
-                      markers: [
-                        Marker(
-                          point: _ponto!,
-                          width: 36,
-                          height: 36,
-                          alignment: Alignment.topCenter,
-                          child: const Icon(
-                            Icons.location_on_rounded,
-                            size: 36,
-                            color: AppColors.laranja,
-                          ),
-                        ),
-                      ],
-                    ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 8),
-          TextButton.icon(
-            onPressed: _usarMinhaLocalizacao,
-            icon: const Icon(Icons.my_location_rounded, size: 18),
-            label: const Text('Usar minha localização atual'),
+          SeletorLocal(
+            key: _seletor,
+            localizacao: _localizacao,
+            pontoInicial: _ponto,
+            servico: widget.enderecoService,
+            onPonto: (p) => setState(() => _ponto = p),
           ),
         ],
       ),

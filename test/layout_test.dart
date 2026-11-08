@@ -23,6 +23,7 @@ import 'package:petcade/screens/cadastro_pet_screen.dart';
 import 'package:petcade/screens/detalhes_pet_screen.dart';
 import 'package:petcade/screens/main_shell.dart';
 import 'package:petcade/screens/perfil/ajuda_screen.dart';
+import 'package:petcade/screens/perfil/alterar_local_screen.dart';
 import 'package:petcade/screens/perfil/animais_salvos_screen.dart';
 import 'package:petcade/screens/perfil/configuracoes_screen.dart';
 import 'package:petcade/screens/perfil/editar_perfil_screen.dart';
@@ -230,6 +231,7 @@ void main() {
         'Configurações': () => const ConfiguracoesScreen(),
         'Ajuda': () => const AjudaScreen(),
         'Termos': () => const TextoScreen(texto: TextoApp.termos),
+        'Alterar localização': () => AlterarLocalScreen(pet: _petDe(0)),
         'Editar perfil': () => const EditarPerfilScreen(
           usuario: Usuario(
             uid: _uid,

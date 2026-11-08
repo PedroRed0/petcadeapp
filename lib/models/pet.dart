@@ -4,6 +4,10 @@ class Pet {
   static const statusPerdido = 'perdido';
   static const statusEncontrado = 'encontrado';
 
+  /// Com esta quantidade de denúncias o anúncio some das buscas até ser
+  /// revisado (no Firebase Console, zerando o campo "denuncias").
+  static const limiteDenuncias = 3;
+
   final String? id;
   final String nome;
   final String especie; // Cachorro, Gato, Outro
@@ -31,6 +35,12 @@ class Pet {
   final String donoId;
   final String donoNome;
 
+  /// Quem salvou o anúncio (recebe aviso quando o pet for encontrado).
+  final List<String> seguidores;
+
+  /// Quantas pessoas denunciaram o anúncio.
+  final int denuncias;
+
   final DateTime criadoEm;
 
   const Pet({
@@ -53,11 +63,14 @@ class Pet {
     this.status = statusPerdido,
     this.donoId = '',
     this.donoNome = '',
+    this.seguidores = const [],
+    this.denuncias = 0,
     required this.criadoEm,
   });
 
   bool get perdido => status != statusEncontrado;
   bool get temLocal => latitude != 0 || longitude != 0;
+  bool get emRevisao => denuncias >= limiteDenuncias;
 
   /// "Cachorro - Pug"
   String get especieRaca {
@@ -87,6 +100,8 @@ class Pet {
       'status': status,
       'donoId': donoId,
       'donoNome': donoNome,
+      'seguidores': seguidores,
+      'denuncias': denuncias,
       'criadoEm': Timestamp.fromDate(criadoEm),
     };
   }
@@ -138,6 +153,13 @@ class Pet {
       status: txt('status').isEmpty ? statusPerdido : txt('status'),
       donoId: txt('donoId'),
       donoNome: txt('donoNome'),
+      seguidores: [
+        if (data['seguidores'] is List)
+          ...(data['seguidores'] as List).map((e) => e.toString()),
+      ],
+      denuncias: (data['denuncias'] is num)
+          ? (data['denuncias'] as num).toInt()
+          : 0,
       criadoEm: criadoEm,
     );
   }

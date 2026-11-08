@@ -19,3 +19,8 @@ Thumbs.db
 # Chaves e credenciais (não versionar!)
 **/android/key.properties
 *.jks
+# Testes das regras do Firestore (node)
+test_regras/node_modules/
+firebase-debug.log
+firestore-debug.log
+.firebase/

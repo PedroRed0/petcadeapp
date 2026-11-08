@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../core/theme/app_colors.dart';
 import '../core/utils/formatos.dart';
 import '../core/widgets/comuns.dart';
+import '../core/widgets/confirmacao_email.dart';
 import '../core/widgets/pet_card.dart';
 import '../models/filtro_pets.dart';
 import '../models/pet.dart';
@@ -105,6 +106,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ],
                 ),
                 const SizedBox(height: 16),
+                const AvisoConfirmarEmail(),
                 CampoBusca(onSubmitted: (t) => _abrirLista(t.trim())),
                 const SizedBox(height: 16),
                 _BannerAjude(

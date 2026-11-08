@@ -63,16 +63,18 @@ class PetService {
   Future<void> marcarEncontrado(Pet pet) async {
     await _colecaoPets.doc(pet.id).update({'status': Pet.statusEncontrado});
 
-    final quemSalvou = await Fb.db
-        .collection('usuarios')
-        .where('favoritos', arrayContains: pet.id)
-        .get();
+    // Lista atualizada de quem acompanha o anúncio.
+    final atual = await _colecaoPets.doc(pet.id).get();
+    final seguidores = Pet.fromDocument(atual).seguidores;
+    if (seguidores.isEmpty) return;
+
     final lote = Fb.db.batch();
     final notificacoes = Fb.db.collection('notificacoes');
-    for (final u in quemSalvou.docs) {
-      if (u.id == pet.donoId) continue;
+    for (final uid in seguidores) {
+      if (uid == pet.donoId) continue;
       lote.set(notificacoes.doc(), {
-        'paraId': u.id,
+        'paraId': uid,
+        'autorId': pet.donoId,
         'tipo': Notificacao.tipoEncontrado,
         'titulo': 'Pet encontrado!',
         'mensagem': '${pet.nome} foi localizado e já está com o tutor.',
@@ -81,6 +83,50 @@ class PetService {
         'criadoEm': FieldValue.serverTimestamp(),
       });
     }
+    await lote.commit();
+  }
+
+  // ---------- Denúncias ----------
+
+  static const motivosDenuncia = [
+    'Anúncio falso ou golpe',
+    'Pediu dinheiro ou pagamento antecipado',
+    'Conteúdo ofensivo ou impróprio',
+    'Não é um animal perdido',
+    'Outro motivo',
+  ];
+
+  DocumentReference<Map<String, dynamic>> _denuncia(String petId, String uid) =>
+      Fb.db.collection('denuncias').doc('${petId}_$uid');
+
+  /// Se o usuário logado já denunciou este anúncio.
+  Future<bool> jaDenunciei(Pet pet) async {
+    final uid = Fb.auth.currentUser?.uid;
+    if (uid == null || pet.id == null) return false;
+    final d = await _denuncia(pet.id!, uid).get();
+    return d.exists;
+  }
+
+  /// Registra a denúncia e soma +1 no anúncio (as duas coisas juntas).
+  /// Com [Pet.limiteDenuncias] denúncias o anúncio sai das buscas.
+  Future<void> denunciar(
+    Pet pet, {
+    required String motivo,
+    String detalhes = '',
+  }) async {
+    final uid = Fb.auth.currentUser?.uid;
+    if (uid == null || pet.id == null) return;
+    final lote = Fb.db.batch();
+    lote.set(_denuncia(pet.id!, uid), {
+      'petId': pet.id,
+      'autorId': uid,
+      'motivo': motivo,
+      'detalhes': detalhes.trim(),
+      'criadoEm': FieldValue.serverTimestamp(),
+    });
+    lote.update(_colecaoPets.doc(pet.id), {
+      'denuncias': FieldValue.increment(1),
+    });
     await lote.commit();
   }
 

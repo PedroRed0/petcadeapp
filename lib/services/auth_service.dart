@@ -24,15 +24,28 @@ class AuthService {
 
   /// Entra com a conta Google. Retorna false se a pessoa cancelar.
   Future<bool> entrarComGoogle() async {
-    UserCredential cred;
     if (kIsWeb) {
       // No navegador, o próprio Firebase abre a janela do Google.
-      cred = await _auth.signInWithPopup(GoogleAuthProvider());
+      try {
+        await _auth.signInWithPopup(GoogleAuthProvider());
+      } on FirebaseAuthException catch (e) {
+        if (e.code == 'popup-closed-by-user' ||
+            e.code == 'cancelled-popup-request') {
+          return false;
+        }
+        if (e.code == 'popup-blocked' ||
+            e.code == 'operation-not-supported-in-this-environment') {
+          // iPhone (app na tela inicial) costuma bloquear popups:
+          // abre o Google na mesma janela e volta logado.
+          await _auth.signInWithRedirect(GoogleAuthProvider());
+          return false;
+        }
+        rethrow;
+      }
     } else {
       try {
         final c = await _entrarComGoogleNativo();
         if (c == null) return false; // cancelou
-        cred = c;
       } on GoogleSignInException catch (e) {
         // Falta configuração (ex.: "ID do cliente da Web"): tenta pelo
         // fluxo do próprio Firebase, que abre o Google no navegador.
@@ -41,7 +54,7 @@ class AuthService {
           rethrow;
         }
         try {
-          cred = await _auth.signInWithProvider(GoogleAuthProvider());
+          await _auth.signInWithProvider(GoogleAuthProvider());
         } on FirebaseAuthException catch (e2) {
           if (e2.code == 'web-context-canceled' ||
               e2.code == 'canceled' ||
@@ -52,7 +65,7 @@ class AuthService {
         }
       }
     }
-    await _garantirPerfil(cred.user!);
+    await garantirPerfil();
     return true;
   }
 
@@ -78,7 +91,10 @@ class AuthService {
   }
 
   /// Na primeira vez que alguém entra com Google, cria o perfil.
-  Future<void> _garantirPerfil(User user) async {
+  /// (Chamado também ao abrir o app, para o login por redirecionamento.)
+  Future<void> garantirPerfil() async {
+    final user = _auth.currentUser;
+    if (user == null) return;
     final doc = Fb.db.collection('usuarios').doc(user.uid);
     final atual = await doc.get();
     if (atual.exists) return;
@@ -104,6 +120,12 @@ class AuthService {
     );
     final user = cred.user!;
     await user.updateDisplayName(nome.trim());
+    // Envia o link de confirmação para o e-mail.
+    try {
+      await user.sendEmailVerification();
+    } catch (_) {
+      // Sem problema: dá para reenviar depois pelo app.
+    }
     await Fb.db.collection('usuarios').doc(user.uid).set({
       'nome': nome.trim(),
       'email': email.trim(),
@@ -111,6 +133,29 @@ class AuthService {
       'favoritos': <String>[],
       'criadoEm': FieldValue.serverTimestamp(),
     });
+  }
+
+  // ---------- Confirmação de e-mail ----------
+
+  /// E-mail confirmado? (Contas Google já vêm confirmadas.)
+  bool get emailConfirmado => _auth.currentUser?.emailVerified ?? false;
+
+  Future<void> reenviarConfirmacao() async {
+    await _auth.currentUser?.sendEmailVerification();
+  }
+
+  /// Busca no Firebase se a pessoa já clicou no link de confirmação.
+  /// Também renova a "credencial" para as regras do banco enxergarem.
+  Future<bool> atualizarConfirmacao() async {
+    final user = _auth.currentUser;
+    if (user == null) return false;
+    await user.reload();
+    final atualizado = _auth.currentUser;
+    if (atualizado?.emailVerified ?? false) {
+      await atualizado!.getIdToken(true);
+      return true;
+    }
+    return false;
   }
 
   Future<void> redefinirSenha(String email) =>
@@ -150,7 +195,7 @@ class AuthService {
         case 'weak-password':
           return 'Senha fraca. Use pelo menos 6 caracteres.';
         case 'too-many-requests':
-          return 'Muitas tentativas. Aguarde um pouco e tente de novo.';
+          return 'Muitas tentativas. Aguarde alguns minutos e tente de novo.';
         case 'network-request-failed':
           return 'Sem conexão com a internet.';
         case 'operation-not-allowed':

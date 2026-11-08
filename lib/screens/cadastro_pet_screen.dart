@@ -107,7 +107,8 @@ class _CadastroPetScreenState extends State<CadastroPetScreen> {
       vistoEm: _vistoEm,
       recompensa: _numero(_recompensa),
       donoId: user?.uid ?? '',
-      donoNome: user?.displayName ?? '',
+      // Só o primeiro nome fica público no anúncio.
+      donoNome: primeiroNome(user?.displayName ?? ''),
       criadoEm: DateTime.now(),
     );
   }

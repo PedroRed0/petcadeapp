@@ -23,6 +23,14 @@ class AjudaScreen extends StatelessWidget {
       'Vá em Perfil > Meus anúncios, toque no anúncio e escolha "Marcar como encontrado". Quem salvou o anúncio também será avisado.',
     ),
     (
+      'Vi um anúncio suspeito. O que faço?',
+      'Abra o anúncio e toque na bandeira no topo para denunciar. A denúncia é anônima. Nunca faça pagamentos antecipados a quem diz ter encontrado seu pet.',
+    ),
+    (
+      'Por que preciso confirmar meu e-mail?',
+      'Para evitar contas falsas, só quem confirma o e-mail pode publicar anúncios, avisar avistamentos e denunciar. Toque no aviso da tela inicial para reenviar o link.',
+    ),
+    (
       'Por que não vejo a distância até os pets?',
       'Permita o acesso à localização nas configurações do celular e toque em Configurações > Atualizar minha localização.',
     ),

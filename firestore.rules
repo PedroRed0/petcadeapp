@@ -1,33 +1,131 @@
 rules_version = '2';
+
+// Regras de segurança do PetCadê.
+// Publicar: firebase deploy --only firestore:rules
+// (ou colar em Firebase Console → Firestore Database → Regras → Publicar)
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    function logado() { return request.auth != null; }
-    function eu() { return request.auth.uid; }
+    // ---------- Funções auxiliares ----------
+    function logado() {
+      return request.auth != null;
+    }
 
-    // Anúncios de pets
+    function eu() {
+      return request.auth.uid;
+    }
+
+    // E-mail confirmado (contas Google já vêm confirmadas).
+    function verificado() {
+      return logado() && request.auth.token.email_verified == true;
+    }
+
+    // Campos alterados nesta gravação.
+    function alterados() {
+      return request.resource.data.diff(resource.data).affectedKeys();
+    }
+
+    function caminhoPet(petId) {
+      return /databases/$(database)/documents/pets_perdidos/$(petId);
+    }
+
+    function caminhoDenuncia(petId) {
+      return /databases/$(database)/documents/denuncias/$(petId + '_' + eu());
+    }
+
+    // A pessoa só entrou (ou só saiu) da lista de quem acompanha o pet,
+    // sem mexer em ninguém mais.
+    function soMexeuEmMim() {
+      let antes = resource.data.get('seguidores', []).toSet();
+      let depois = request.resource.data.get('seguidores', []).toSet();
+      return (depois.difference(antes) == [eu()].toSet()
+                && antes.difference(depois).size() == 0)
+          || (antes.difference(depois) == [eu()].toSet()
+                && depois.difference(antes).size() == 0);
+    }
+
+    // ---------- Anúncios de pets ----------
     match /pets_perdidos/{petId} {
-      // Qualquer usuário logado vê os anúncios
       allow read: if logado();
-      // Só cria anúncio em seu próprio nome
-      allow create: if logado()
-                    && request.resource.data.donoId == eu()
-                    && request.resource.data.nome is string
-                    && request.resource.data.nome.size() > 0;
-      // Só o dono edita / exclui
-      allow update, delete: if logado() && resource.data.donoId == eu();
+
+      // Só com e-mail confirmado, em nome próprio, sem denúncias forjadas.
+      allow create: if verificado()
+        && request.resource.data.get('donoId', '') == eu()
+        && request.resource.data.nome is string
+        && request.resource.data.nome.size() > 0
+        && request.resource.data.nome.size() <= 80
+        && request.resource.data.get('denuncias', 0) == 0
+        && request.resource.data.get('seguidores', []).size() == 0;
+
+      allow update: if logado() && (
+        // Dono: edita o anúncio, mas não zera denúncias nem troca o dono.
+        (resource.data.get('donoId', '') == eu()
+          && !alterados().hasAny(['donoId', 'denuncias', 'seguidores']))
+        // Outra pessoa: salvar / tirar dos salvos (lista de seguidores).
+        || (resource.data.get('donoId', '') != eu()
+          && alterados().hasOnly(['seguidores'])
+          && soMexeuEmMim())
+        // Outra pessoa: denúncia (+1), junto com o registro da denúncia.
+        || (verificado()
+          && resource.data.get('donoId', '') != eu()
+          && alterados().hasOnly(['denuncias'])
+          && request.resource.data.denuncias
+               == resource.data.get('denuncias', 0) + 1
+          && !exists(caminhoDenuncia(petId))
+          && existsAfter(caminhoDenuncia(petId)))
+      );
+
+      allow delete: if logado() && resource.data.get('donoId', '') == eu();
     }
 
-    // Perfis (nome, telefone, favoritos)
+    // ---------- Denúncias ----------
+    // O id é "<idDoPet>_<idDeQuemDenunciou>": uma denúncia por pessoa.
+    match /denuncias/{denunciaId} {
+      // Cada um só consegue ver a própria denúncia (para saber se já denunciou).
+      allow get: if logado() && denunciaId.split('_')[1] == eu();
+
+      allow create: if verificado()
+        && denunciaId == request.resource.data.petId + '_' + eu()
+        && request.resource.data.autorId == eu()
+        && request.resource.data.motivo is string
+        && request.resource.data.motivo.size() <= 80
+        && request.resource.data.get('detalhes', '').size() <= 500
+        && get(caminhoPet(request.resource.data.petId)).data.get('donoId', '') != eu()
+        && getAfter(caminhoPet(request.resource.data.petId)).data.denuncias
+             == get(caminhoPet(request.resource.data.petId)).data.get('denuncias', 0) + 1;
+    }
+
+    // ---------- Perfis (privados) ----------
+    // E-mail, telefone e favoritos: só o próprio usuário lê e altera.
     match /usuarios/{uid} {
-      allow read: if logado();
-      allow write: if logado() && uid == eu();
+      allow read, write: if logado() && uid == eu();
     }
 
-    // Notificações dentro do app
+    // ---------- Notificações ----------
     match /notificacoes/{id} {
-      allow read, update, delete: if logado() && resource.data.paraId == eu();
-      allow create: if logado();
+      allow read, delete: if logado() && resource.data.paraId == eu();
+
+      // Só dá para marcar como lida.
+      allow update: if logado()
+        && resource.data.paraId == eu()
+        && alterados().hasOnly(['lida']);
+
+      // Só avisos legítimos:
+      // - "avistamento": para o dono do pet, enviado por quem confirmou o e-mail;
+      // - "encontrado": enviado pelo dono, para quem acompanhava o pet.
+      allow create: if logado()
+        && request.resource.data.autorId == eu()
+        && request.resource.data.mensagem.size() <= 1000
+        && (
+          (request.resource.data.tipo == 'avistamento'
+            && verificado()
+            && get(caminhoPet(request.resource.data.petId)).data.get('donoId', '')
+                 == request.resource.data.paraId)
+          || (request.resource.data.tipo == 'encontrado'
+            && get(caminhoPet(request.resource.data.petId)).data.get('donoId', '') == eu()
+            && request.resource.data.paraId
+                 in get(caminhoPet(request.resource.data.petId)).data.get('seguidores', []))
+        );
     }
   }
 }

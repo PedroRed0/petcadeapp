@@ -48,13 +48,17 @@ class NotificacaoService {
         'Este anúncio é antigo e não tem um tutor cadastrado para receber o aviso.',
       );
     }
-    final nome = Fb.auth.currentUser?.displayName ?? 'Alguém';
+    final completo = Fb.auth.currentUser?.displayName ?? '';
+    final nome = completo.trim().isEmpty
+        ? 'Alguém'
+        : completo.trim().split(RegExp(r'\s+')).first;
     final partes = <String>[
       '$nome informou que viu ${pet.nome}${onde.isNotEmpty ? ' em $onde' : ''}.',
       if (mensagem.isNotEmpty) '"$mensagem"',
     ];
     await _colecao.add({
       'paraId': pet.donoId,
+      'autorId': Fb.auth.currentUser?.uid,
       'tipo': Notificacao.tipoAvistamento,
       'titulo': 'Novo avistamento',
       'mensagem': partes.join(' '),

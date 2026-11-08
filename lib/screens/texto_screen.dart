@@ -28,6 +28,14 @@ class TextoScreen extends StatelessWidget {
       'Você é responsável pelas informações e fotos que publica. Publique apenas animais que realmente estão desaparecidos e mantenha o anúncio atualizado, marcando como encontrado quando for o caso.',
     ),
     (
+      'Confirmação de e-mail',
+      'Para publicar anúncios, avisar avistamentos e denunciar, é preciso confirmar o e-mail. Isso dificulta contas falsas.',
+    ),
+    (
+      'Denúncias',
+      'Anúncios suspeitos podem ser denunciados pela bandeira no topo do anúncio. As denúncias são anônimas. Com 3 denúncias o anúncio sai das buscas até ser revisado.',
+    ),
+    (
       'Boa convivência',
       'Não é permitido publicar conteúdo ofensivo, falso ou que não tenha relação com animais desaparecidos. Anúncios assim podem ser removidos.',
     ),
@@ -44,7 +52,7 @@ class TextoScreen extends StatelessWidget {
     ),
     (
       'Como usamos',
-      'Os anúncios ficam visíveis para todos os usuários do app. Seu e-mail e telefone não são exibidos nos anúncios.',
+      'Os anúncios ficam visíveis para os usuários do app, apenas com o seu primeiro nome. Seu e-mail e telefone ficam protegidos: nenhum outro usuário consegue vê-los. O telefone só é compartilhado quando você mesmo o informa ao avisar que viu um pet.',
     ),
     (
       'Localização',

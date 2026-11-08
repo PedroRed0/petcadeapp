@@ -55,7 +55,7 @@ class FiltroPets {
   }
 
   bool aceita(Pet pet) {
-    if (!pet.perdido) return false;
+    if (!pet.perdido || pet.emRevisao) return false;
     if (especie != 'Todos' && pet.especie != especie) return false;
     if (porte.isNotEmpty && pet.porte != porte) return false;
     if (sexo.isNotEmpty && pet.sexo != sexo) return false;

@@ -57,13 +57,22 @@ class UsuarioService {
     }, SetOptions(merge: true));
   }
 
+  /// Salva / tira dos salvos. Guarda no perfil (para "Animais salvos") e
+  /// no anúncio (para o tutor poder avisar quando o pet for encontrado).
   Future<void> alternarFavorito(String petId, bool salvar) async {
     final id = uid;
     if (id == null) return;
-    await _colecao.doc(id).set({
+    final lote = Fb.db.batch();
+    lote.set(_colecao.doc(id), {
       'favoritos': salvar
           ? FieldValue.arrayUnion([petId])
           : FieldValue.arrayRemove([petId]),
     }, SetOptions(merge: true));
+    lote.update(Fb.db.collection('pets_perdidos').doc(petId), {
+      'seguidores': salvar
+          ? FieldValue.arrayUnion([id])
+          : FieldValue.arrayRemove([id]),
+    });
+    await lote.commit();
   }
 }

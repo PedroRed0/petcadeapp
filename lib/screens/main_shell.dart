@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../core/theme/app_colors.dart';
+import '../core/widgets/confirmacao_email.dart';
+import '../services/auth_service.dart';
 import '../services/localizacao_service.dart';
 import '../services/notificacao_service.dart';
 import 'buscar_screen.dart';
@@ -38,11 +40,14 @@ class _MainShellState extends State<MainShell> {
     _naoLidas = NotificacaoService().quantidadeNaoLidas();
     // Pede a localização uma vez, para mostrar as distâncias.
     LocalizacaoService.instancia.atualizar();
+    // Cria o perfil se ainda não existir (ex.: login com Google na web).
+    AuthService().garantirPerfil().catchError((_) {});
   }
 
   void _trocar(int aba) => setState(() => _aba = aba);
 
-  void _novoAnuncio() {
+  Future<void> _novoAnuncio() async {
+    if (!await exigirEmailConfirmado(context) || !mounted) return;
     Navigator.push(
       context,
       MaterialPageRoute(builder: (_) => const CadastroPetScreen()),

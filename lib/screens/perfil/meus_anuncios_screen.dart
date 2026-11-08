@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/comuns.dart';
+import '../../core/widgets/confirmacao_email.dart';
 import '../../core/widgets/pet_card.dart';
 import '../../models/pet.dart';
 import '../../services/pet_service.dart';
@@ -109,10 +110,15 @@ class _MeusAnunciosScreenState extends State<MeusAnunciosScreen> {
           IconButton(
             tooltip: 'Novo anúncio',
             icon: const Icon(Icons.add_rounded),
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const CadastroPetScreen()),
-            ),
+            onPressed: () async {
+              if (!await exigirEmailConfirmado(context) || !context.mounted) {
+                return;
+              }
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const CadastroPetScreen()),
+              );
+            },
           ),
           const SizedBox(width: 8),
         ],

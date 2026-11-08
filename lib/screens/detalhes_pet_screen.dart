@@ -5,6 +5,7 @@ import 'package:share_plus/share_plus.dart';
 import '../core/theme/app_colors.dart';
 import '../core/utils/formatos.dart';
 import '../core/widgets/comuns.dart';
+import '../core/widgets/confirmacao_email.dart';
 import '../core/widgets/pet_foto.dart';
 import '../core/widgets/selo_status.dart';
 import '../models/pet.dart';
@@ -70,12 +71,36 @@ class _DetalhesPetScreenState extends State<DetalhesPetScreen> {
   }
 
   Future<void> _informarAvistamento(Pet pet) async {
+    if (!await exigirEmailConfirmado(context) || !mounted) return;
     final enviado = await abrirJanela<bool>(
       context: context,
       builder: (_) => _FormAvistamento(pet: pet),
     );
     if (enviado == true && mounted) {
       mostrarAviso(context, 'Obrigado! O tutor foi avisado.');
+    }
+  }
+
+  Future<void> _denunciar(Pet pet) async {
+    if (!await exigirEmailConfirmado(context) || !mounted) return;
+    try {
+      if (await PetService().jaDenunciei(pet)) {
+        if (mounted) {
+          mostrarAviso(context, 'Você já denunciou este anúncio. Obrigado!');
+        }
+        return;
+      }
+    } catch (_) {}
+    if (!mounted) return;
+    final enviada = await abrirJanela<bool>(
+      context: context,
+      builder: (_) => _FormDenuncia(pet: pet),
+    );
+    if (enviada == true && mounted) {
+      mostrarAviso(
+        context,
+        'Denúncia enviada. Obrigado por ajudar a manter o PetCadê seguro!',
+      );
     }
   }
 
@@ -116,7 +141,7 @@ class _DetalhesPetScreenState extends State<DetalhesPetScreen> {
         return Scaffold(
           body: CustomScrollView(
             slivers: [
-              _galeria(pet),
+              _galeria(pet, souDono),
               SliverPadding(
                 padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
                 sliver: SliverList.list(
@@ -217,6 +242,31 @@ class _DetalhesPetScreenState extends State<DetalhesPetScreen> {
                         ),
                       ),
                     ],
+                    if (pet.emRevisao) ...[
+                      const SizedBox(height: 18),
+                      _Aviso(
+                        icone: Icons.flag_outlined,
+                        titulo: 'Anúncio em revisão',
+                        texto: souDono
+                            ? 'Seu anúncio recebeu denúncias e saiu das buscas '
+                                  'até ser revisado. Se for um engano, fale com a '
+                                  'gente em Ajuda e suporte.'
+                            : 'Este anúncio recebeu denúncias e está sendo '
+                                  'revisado. Tenha cuidado.',
+                      ),
+                    ],
+                    if (!souDono && pet.perdido) ...[
+                      const SizedBox(height: 18),
+                      const _Aviso(
+                        icone: Icons.shield_outlined,
+                        titulo: 'Cuidado com golpes',
+                        texto:
+                            'Nunca faça pagamentos antecipados nem passe '
+                            'códigos recebidos por SMS. Combine encontros em '
+                            'locais públicos. Se algo parecer estranho, toque '
+                            'na bandeira no topo para denunciar.',
+                      ),
+                    ],
                     if (pet.donoNome.isNotEmpty) ...[
                       const SizedBox(height: 18),
                       Text(
@@ -286,13 +336,31 @@ class _DetalhesPetScreenState extends State<DetalhesPetScreen> {
     );
   }
 
-  Widget _galeria(Pet pet) {
+  Widget _galeria(Pet pet, bool souDono) {
     final total = pet.fotos.isEmpty ? 1 : pet.fotos.length;
     return SliverAppBar(
       expandedHeight: 320,
       pinned: true,
       backgroundColor: AppColors.roxoEscuro,
       foregroundColor: Colors.white,
+      actions: [
+        if (!souDono && pet.id != null)
+          Padding(
+            padding: const EdgeInsets.all(8),
+            child: CircleAvatar(
+              backgroundColor: Colors.black.withValues(alpha: 0.3),
+              child: IconButton(
+                tooltip: 'Denunciar anúncio',
+                icon: const Icon(
+                  Icons.flag_outlined,
+                  size: 18,
+                  color: Colors.white,
+                ),
+                onPressed: () => _denunciar(pet),
+              ),
+            ),
+          ),
+      ],
       leading: Padding(
         padding: const EdgeInsets.all(8),
         child: CircleAvatar(
@@ -489,6 +557,177 @@ class _InfoLinha extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Caixinha de aviso (segurança / revisão).
+class _Aviso extends StatelessWidget {
+  final IconData icone;
+  final String titulo;
+  final String texto;
+
+  const _Aviso({
+    required this.icone,
+    required this.titulo,
+    required this.texto,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.fundoDestaque(context),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icone, size: 20, color: AppColors.destaque(context)),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  titulo,
+                  style: GoogleFonts.poppins(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  texto,
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    height: 1.4,
+                    color: AppColors.textoSecundario,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Formulário de denúncia.
+class _FormDenuncia extends StatefulWidget {
+  final Pet pet;
+
+  const _FormDenuncia({required this.pet});
+
+  @override
+  State<_FormDenuncia> createState() => _FormDenunciaState();
+}
+
+class _FormDenunciaState extends State<_FormDenuncia> {
+  final _detalhes = TextEditingController();
+  String? _motivo;
+  bool _enviando = false;
+
+  @override
+  void dispose() {
+    _detalhes.dispose();
+    super.dispose();
+  }
+
+  Future<void> _enviar() async {
+    if (_motivo == null) {
+      mostrarAviso(context, 'Escolha um motivo.');
+      return;
+    }
+    setState(() => _enviando = true);
+    try {
+      await PetService().denunciar(
+        widget.pet,
+        motivo: _motivo!,
+        detalhes: _detalhes.text,
+      );
+      if (mounted) Navigator.pop(context, true);
+    } catch (e) {
+      if (mounted) {
+        setState(() => _enviando = false);
+        mostrarAviso(context, 'Não foi possível enviar a denúncia: $e');
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+        20,
+        0,
+        20,
+        20 + MediaQuery.of(context).viewInsets.bottom,
+      ),
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              'Denunciar anúncio',
+              style: GoogleFonts.poppins(
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            Text(
+              'Sua denúncia é anônima: o tutor não fica sabendo quem denunciou.',
+              style: GoogleFonts.poppins(
+                fontSize: 13,
+                color: AppColors.textoSecundario,
+              ),
+            ),
+            const SizedBox(height: 12),
+            for (final m in PetService.motivosDenuncia)
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                dense: true,
+                onTap: () => setState(() => _motivo = m),
+                leading: Icon(
+                  _motivo == m
+                      ? Icons.radio_button_checked_rounded
+                      : Icons.radio_button_unchecked_rounded,
+                  size: 20,
+                  color: _motivo == m
+                      ? AppColors.laranja
+                      : AppColors.textoSecundario,
+                ),
+                title: Text(m, style: GoogleFonts.poppins(fontSize: 14)),
+              ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _detalhes,
+              maxLines: 3,
+              maxLength: 500,
+              decoration: const InputDecoration(
+                hintText: 'Detalhes (opcional)',
+              ),
+            ),
+            const SizedBox(height: 8),
+            ElevatedButton(
+              onPressed: _enviando ? null : _enviar,
+              child: _enviando
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
+                  : const Text('Enviar denúncia'),
+            ),
+          ],
+        ),
       ),
     );
   }

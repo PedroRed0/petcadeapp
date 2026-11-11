@@ -46,9 +46,20 @@ class PrestigioService {
   }
 
   /// O tutor credita quem ajudou e a pessoa recebe uma notificação.
+  /// Se a ajuda fizer a pessoa subir de nível, a notificação vira
+  /// "Patente desbloqueada".
   Future<void> registrarAjuda(Pet pet, String ajudanteId) async {
     final uid = Fb.auth.currentUser?.uid;
     if (uid == null || pet.id == null) return;
+    var antes = 0;
+    try {
+      antes = (await _ajudas.where('ajudanteId', isEqualTo: ajudanteId).get())
+          .docs
+          .length;
+    } catch (_) {}
+    final novo = Nivel.subiu(antes, antes + 1);
+    final depois = antes + 1;
+
     final lote = Fb.db.batch();
     lote.set(_ajudas.doc(pet.id), {
       'petId': pet.id,
@@ -61,8 +72,14 @@ class PrestigioService {
       'paraId': ajudanteId,
       'autorId': uid,
       'tipo': Notificacao.tipoAjuda,
-      'titulo': 'Você ajudou a encontrar ${pet.nome}! 🎉',
-      'mensagem': 'O tutor confirmou a sua ajuda. +1 animal encontrado no seu prestígio.',
+      'titulo': novo != null
+          ? 'Patente desbloqueada'
+          : 'Você ajudou a encontrar ${pet.nome}! 🎉',
+      'mensagem': novo != null
+          ? 'Você virou ${novo.titulo}! $depois pets encontrados.'
+          : 'O tutor confirmou a sua ajuda. Agora são $depois '
+                '${depois == 1 ? 'pet encontrado' : 'pets encontrados'}.',
+      if (novo != null) 'patente': novo.name,
       'petId': pet.id,
       'lida': false,
       'criadoEm': FieldValue.serverTimestamp(),

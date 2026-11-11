@@ -5,7 +5,10 @@ import '../../core/theme/app_colors.dart';
 import '../../core/widgets/avatar_usuario.dart';
 import '../../core/widgets/comuns.dart';
 import '../../core/widgets/selo_nivel.dart';
+import '../../models/nivel.dart';
+import '../../services/prestigio_service.dart';
 import '../chat/conversas_screen.dart';
+import 'meus_niveis_screen.dart';
 import '../../models/pet.dart';
 import '../../models/usuario.dart';
 import '../../services/auth_service.dart';
@@ -28,6 +31,9 @@ class PerfilScreen extends StatefulWidget {
 class _PerfilScreenState extends State<PerfilScreen> {
   late final Stream<Usuario?> _usuario;
   late final Stream<List<Pet>> _meus;
+  late final Stream<int> _encontrados = PrestigioService().encontrados(
+    UsuarioService().uid ?? '',
+  );
 
   @override
   void initState() {
@@ -63,7 +69,13 @@ class _PerfilScreenState extends State<PerfilScreen> {
             children: [
               Row(
                 children: [
-                  AvatarEditavel(usuario: u),
+                  StreamBuilder<int>(
+                    stream: _encontrados,
+                    builder: (context, s) => MolduraNivel(
+                      nivel: Nivel.deQuantidade(s.data ?? 0),
+                      child: AvatarEditavel(usuario: u),
+                    ),
+                  ),
                   const SizedBox(width: 16),
                   Expanded(
                     child: Column(
@@ -117,7 +129,17 @@ class _PerfilScreenState extends State<PerfilScreen> {
                   ),
                 ],
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 14),
+              StreamBuilder<int>(
+                stream: _encontrados,
+                builder: (context, s) => Center(
+                  child: EtiquetaPrestigio(
+                    encontrados: s.data ?? 0,
+                    onTap: () => _abrir(const MeusNiveisScreen()),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 18),
               CartaoPrestigio(uid: UsuarioService().uid ?? ''),
               const SizedBox(height: 10),
               LinhaOpcao(

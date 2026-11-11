@@ -17,6 +17,8 @@ import 'package:petcade/models/pet.dart';
 import 'package:petcade/screens/chat/chat_screen.dart';
 import 'package:petcade/screens/chat/conversas_screen.dart';
 import 'package:petcade/screens/detalhes_pet_screen.dart';
+import 'package:petcade/screens/notificacoes_screen.dart';
+import 'package:petcade/screens/perfil/meus_niveis_screen.dart';
 import 'package:petcade/services/chat_service.dart';
 import 'package:petcade/services/firebase_refs.dart';
 import 'package:petcade/services/prestigio_service.dart';
@@ -85,6 +87,20 @@ void main() {
       expect(Nivel.diamante.progresso(80), 1);
     });
 
+    test('patentes: Explorador, Protetor, Guardião e Lenda', () {
+      expect(Nivel.patentes.map((n) => n.titulo), [
+        'Explorador',
+        'Protetor',
+        'Guardião',
+        'Lenda',
+      ]);
+      expect(Nivel.prata.rotulo, 'NÍVEL 2 • PRATA');
+      expect(Nivel.bronze.rotuloTitulo, 'NÍVEL 1 • EXPLORADOR');
+      expect(Nivel.subiu(4, 5), Nivel.bronze);
+      expect(Nivel.subiu(5, 6), isNull);
+      expect(Nivel.subiu(49, 50), Nivel.diamante);
+    });
+
     test('nome curto público', () {
       expect(PerfilPublico.nomeCurto('Pedro Henrique Rodrigues'), 'Pedro R.');
       expect(PerfilPublico.nomeCurto('Ana'), 'Ana');
@@ -113,6 +129,21 @@ void main() {
       _entrarComo('pedro');
       await PrestigioService().registrarInteresse(pet);
       expect(await PrestigioService().candidatos(pet), isEmpty);
+    });
+
+    test('a 5ª ajuda gera "Patente desbloqueada: Explorador"', () async {
+      for (var i = 0; i < 4; i++) {
+        await db.collection('ajudas').doc('antiga$i').set({
+          'ajudanteId': 'ana',
+        });
+      }
+      final pet = await _pet();
+      _entrarComo('pedro');
+      await PrestigioService().registrarAjuda(pet, 'ana');
+      final n = (await db.collection('notificacoes').get()).docs.single;
+      expect(n['titulo'], 'Patente desbloqueada');
+      expect(n['mensagem'], 'Você virou Explorador! 5 pets encontrados.');
+      expect(n['patente'], 'bronze');
     });
 
     test('5 ajudas = Bronze', () async {
@@ -306,9 +337,9 @@ void main() {
           tam,
           esc,
         );
-        expect(find.text('Prestígio Bronze'), findsOneWidget);
-        expect(find.text('7 animais encontrados'), findsOneWidget);
-        expect(find.textContaining('Faltam 3 para'), findsOneWidget);
+        expect(find.text('Meus níveis'), findsOneWidget);
+        expect(find.text('Explorador • 7 pets encontrados'), findsOneWidget);
+        expect(find.text('Faltam 3 para Protetor (Prata)'), findsOneWidget);
       });
     }
     for (final tam in [const Size(320, 568), const Size(360, 740)]) {
@@ -342,6 +373,57 @@ void main() {
           expect(await PrestigioService().encontrados('ana').first, 1);
         },
       );
+    }
+    for (final tam in [const Size(320, 568), const Size(360, 740)]) {
+      testWidgets('Meus níveis (${tam.width.toInt()}px)', (t) async {
+        for (var i = 0; i < 12; i++) {
+          await db.collection('ajudas').doc('p$i').set({'ajudanteId': 'ana'});
+        }
+        _entrarComo('ana');
+        await abrir(t, const MeusNiveisScreen(), tam, 1.3);
+        expect(find.text('MEUS NÍVEIS'), findsOneWidget);
+        expect(find.text('EXPLORADOR'), findsOneWidget);
+        expect(find.text('PROTETOR'), findsOneWidget);
+        expect(find.text('SEU NÍVEL'), findsOneWidget);
+        await t.scrollUntilVisible(
+          find.text('Faltam 38 pets'),
+          200,
+          scrollable: find.byType(Scrollable).first,
+        );
+        expect(find.text('Faltam 8 pets'), findsOneWidget); // Ouro
+      });
+
+      testWidgets('Notificação de patente (${tam.width.toInt()}px)', (t) async {
+        _entrarComo('ana');
+        await db.collection('notificacoes').add({
+          'paraId': 'ana',
+          'autorId': 'pedro',
+          'tipo': 'ajuda',
+          'titulo': 'Patente desbloqueada',
+          'mensagem': 'Você virou Explorador! 5 pets encontrados.',
+          'patente': 'bronze',
+          'petId': 'nina',
+          'lida': false,
+          'criadoEm': Timestamp.now(),
+        });
+        for (var i = 0; i < 10; i++) {
+          await db.collection('ajudas').doc('q$i').set({'ajudanteId': 'pedro'});
+        }
+        await db.collection('notificacoes').add({
+          'paraId': 'ana',
+          'autorId': 'pedro',
+          'tipo': 'avistamento',
+          'titulo': 'Novo avistamento',
+          'mensagem': 'Pedro informou que viu Thor em Itaquera.',
+          'petId': 'thor',
+          'lida': true,
+          'criadoEm': Timestamp.now(),
+        });
+        await abrir(t, const NotificacoesScreen(visivel: true), tam, 1.3);
+        expect(find.text('Patente desbloqueada'), findsOneWidget);
+        expect(find.text('NÍVEL 1 • EXPLORADOR'), findsOneWidget);
+        expect(find.text('NÍVEL 2 • PRATA'), findsOneWidget); // foto do Pedro
+      });
     }
   });
 }

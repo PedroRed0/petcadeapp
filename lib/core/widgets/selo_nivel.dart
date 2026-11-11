@@ -2,38 +2,140 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../models/nivel.dart';
+import '../../screens/perfil/meus_niveis_screen.dart';
 import '../../services/prestigio_service.dart';
 import '../theme/app_colors.dart';
 
-/// Selo pequeno do nível: "🥇 Ouro". Iniciantes não mostram selo.
+/// Cor do texto em cima do degradê metálico (a prata é clara).
+Color corSobreMetal(Nivel n) =>
+    n == Nivel.prata ? const Color(0xFF3E4650) : Colors.white;
+
+/// Etiqueta metálica: "★ NÍVEL 2 • PRATA". Iniciantes não mostram nada.
 class SeloNivel extends StatelessWidget {
   final Nivel nivel;
+
+  /// true: só a medalha redonda (para listas apertadas).
   final bool soEmoji;
 
-  const SeloNivel({super.key, required this.nivel, this.soEmoji = false});
+  /// true: usa o título ("NÍVEL 2 • PROTETOR").
+  final bool comTitulo;
+
+  final double tamanhoFonte;
+
+  const SeloNivel({
+    super.key,
+    required this.nivel,
+    this.soEmoji = false,
+    this.comTitulo = false,
+    this.tamanhoFonte = 10,
+  });
 
   @override
   Widget build(BuildContext context) {
     if (nivel == Nivel.iniciante) return const SizedBox.shrink();
     if (soEmoji) {
       return Tooltip(
-        message: 'Nível ${nivel.nome}',
-        child: Text(nivel.emoji, style: const TextStyle(fontSize: 14)),
+        message: '${nivel.rotulo} • ${nivel.titulo}',
+        child: MedalhaNivel(nivel: nivel, tamanho: 18),
       );
     }
+    final cor = corSobreMetal(nivel);
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      padding: const EdgeInsets.fromLTRB(6, 2, 8, 2),
       decoration: BoxDecoration(
-        color: nivel.cor.withValues(alpha: 0.14),
+        gradient: nivel.degrade,
         borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.6)),
+        boxShadow: [
+          BoxShadow(
+            color: nivel.cor.withValues(alpha: 0.35),
+            blurRadius: 4,
+            offset: const Offset(0, 1),
+          ),
+        ],
       ),
-      child: Text(
-        '${nivel.emoji} ${nivel.nome}',
-        style: GoogleFonts.poppins(
-          fontSize: 11,
-          fontWeight: FontWeight.w600,
-          color: nivel.cor,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(nivel.icone, size: tamanhoFonte + 3, color: cor),
+          const SizedBox(width: 3),
+          Flexible(
+            child: Text(
+              comTitulo ? nivel.rotuloTitulo : nivel.rotulo,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: GoogleFonts.poppins(
+                fontSize: tamanhoFonte,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.2,
+                color: cor,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Medalha redonda com o ícone do nível.
+class MedalhaNivel extends StatelessWidget {
+  final Nivel nivel;
+  final double tamanho;
+
+  const MedalhaNivel({super.key, required this.nivel, this.tamanho = 22});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: tamanho,
+      height: tamanho,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: nivel.degrade,
+        border: Border.all(color: Colors.white, width: tamanho * 0.08),
+        boxShadow: [
+          BoxShadow(color: nivel.cor.withValues(alpha: 0.4), blurRadius: 3),
+        ],
+      ),
+      child: Icon(
+        nivel.icone,
+        size: tamanho * 0.58,
+        color: corSobreMetal(nivel),
+      ),
+    );
+  }
+}
+
+/// Anel metálico em volta da foto (vazio para Iniciante).
+class MolduraNivel extends StatelessWidget {
+  final Nivel nivel;
+  final Widget child;
+  final double espessura;
+
+  const MolduraNivel({
+    super.key,
+    required this.nivel,
+    required this.child,
+    this.espessura = 3,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (nivel == Nivel.iniciante) return child;
+    return Container(
+      padding: EdgeInsets.all(espessura),
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: nivel.degrade,
+      ),
+      child: Container(
+        padding: const EdgeInsets.all(2),
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          color: Theme.of(context).colorScheme.surface,
         ),
+        child: child,
       ),
     );
   }
@@ -65,7 +167,62 @@ class _SeloNivelDeState extends State<SeloNivelDe> {
   }
 }
 
-/// Cartão do Perfil: nível atual, quantos animais encontrou e o progresso.
+/// Etiqueta do Perfil: "NÍVEL 1 • EXPLORADOR • 5 pets encontrados".
+class EtiquetaPrestigio extends StatelessWidget {
+  final int encontrados;
+  final VoidCallback? onTap;
+
+  const EtiquetaPrestigio({super.key, required this.encontrados, this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final nivel = Nivel.deQuantidade(encontrados);
+    final pets = encontrados == 1
+        ? '1 pet encontrado'
+        : '$encontrados pets encontrados';
+    final iniciante = nivel == Nivel.iniciante;
+    final texto = iniciante
+        ? 'Ajude a encontrar ${Nivel.bronze.minimo} pets e vire '
+              '${Nivel.bronze.titulo}!'
+        : '${nivel.rotuloTitulo} • $pets';
+    final cor = iniciante ? Colors.white : corSobreMetal(nivel);
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+        decoration: BoxDecoration(
+          gradient: iniciante
+              ? const LinearGradient(
+                  colors: [AppColors.laranja, Color(0xFFFFA24D)],
+                )
+              : nivel.degrade,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(nivel.icone, size: 14, color: cor),
+            const SizedBox(width: 5),
+            Flexible(
+              child: Text(
+                texto,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: GoogleFonts.poppins(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: cor,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Cartão do Perfil: nível atual e progresso. Abre "Meus níveis".
 class CartaoPrestigio extends StatefulWidget {
   final String uid;
 
@@ -79,45 +236,6 @@ class _CartaoPrestigioState extends State<CartaoPrestigio> {
   late final Stream<int> _encontrados = PrestigioService().encontrados(
     widget.uid,
   );
-
-  void _explicar(BuildContext context) {
-    showDialog<void>(
-      context: context,
-      builder: (_) => AlertDialog(
-        title: Text(
-          'Prestígio',
-          style: GoogleFonts.poppins(fontWeight: FontWeight.w700),
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Você ganha +1 quando um tutor confirma que você ajudou a '
-              'encontrar o pet dele (avisando "Eu vi este pet" ou '
-              'conversando pelo anúncio).',
-              style: GoogleFonts.poppins(fontSize: 13),
-            ),
-            const SizedBox(height: 12),
-            for (final n in Nivel.values.skip(1))
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 3),
-                child: Text(
-                  '${n.emoji}  ${n.nome}: ${n.minimo} animais',
-                  style: GoogleFonts.poppins(fontSize: 14),
-                ),
-              ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Entendi'),
-          ),
-        ],
-      ),
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -133,7 +251,10 @@ class _CartaoPrestigioState extends State<CartaoPrestigio> {
           borderRadius: BorderRadius.circular(16),
           child: InkWell(
             borderRadius: BorderRadius.circular(16),
-            onTap: () => _explicar(context),
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const MeusNiveisScreen()),
+            ),
             child: Ink(
               padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
@@ -145,23 +266,25 @@ class _CartaoPrestigioState extends State<CartaoPrestigio> {
                 children: [
                   Row(
                     children: [
-                      Text(nivel.emoji, style: const TextStyle(fontSize: 26)),
+                      MedalhaNivel(nivel: nivel, tamanho: 38),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Prestígio ${nivel.nome}',
+                              'Meus níveis',
                               style: GoogleFonts.poppins(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
                             Text(
-                              n == 1
-                                  ? '1 animal encontrado'
-                                  : '$n animais encontrados',
+                              nivel == Nivel.iniciante
+                                  ? 'Iniciante • ${n == 1 ? '1 pet encontrado' : '$n pets encontrados'}'
+                                  : '${nivel.titulo} • ${n == 1 ? '1 pet encontrado' : '$n pets encontrados'}',
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                               style: GoogleFonts.poppins(
                                 fontSize: 12,
                                 color: AppColors.textoSecundario,
@@ -171,8 +294,8 @@ class _CartaoPrestigioState extends State<CartaoPrestigio> {
                         ),
                       ),
                       const Icon(
-                        Icons.info_outline_rounded,
-                        size: 18,
+                        Icons.chevron_right_rounded,
+                        size: 20,
                         color: AppColors.textoSecundario,
                       ),
                     ],
@@ -190,9 +313,9 @@ class _CartaoPrestigioState extends State<CartaoPrestigio> {
                   const SizedBox(height: 6),
                   Text(
                     proximo == null
-                        ? 'Nível máximo! Obrigado por tanta ajuda 💜'
+                        ? 'Você é uma Lenda! Obrigado por tanta ajuda 💜'
                         : 'Faltam ${nivel.faltamPara(n)} para '
-                              '${proximo.emoji} ${proximo.nome}',
+                              '${proximo.titulo} (${proximo.nome})',
                     style: GoogleFonts.poppins(
                       fontSize: 12,
                       color: AppColors.textoSecundario,

@@ -7,7 +7,14 @@ import '../core/widgets/comuns.dart';
 import '../models/notificacao.dart';
 import '../services/notificacao_service.dart';
 import '../services/pet_service.dart';
+import '../core/widgets/avatar_usuario.dart';
+import '../core/widgets/selo_nivel.dart';
+import '../models/nivel.dart';
+import '../models/perfil_publico.dart';
+import '../services/perfil_service.dart';
+import '../services/prestigio_service.dart';
 import 'chat/chat_screen.dart';
+import 'perfil/meus_niveis_screen.dart';
 import 'detalhes_pet_screen.dart';
 
 class NotificacoesScreen extends StatefulWidget {
@@ -122,9 +129,83 @@ class _CartaoNotificacao extends StatelessWidget {
 
   const _CartaoNotificacao({required this.notificacao, required this.onTap});
 
+  /// Card laranja "Patente desbloqueada".
+  Widget _cartaoPatente(BuildContext context, Nivel nivel) {
+    final n = notificacao;
+    return Material(
+      color: AppColors.laranja,
+      borderRadius: BorderRadius.circular(16),
+      child: InkWell(
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const MeusNiveisScreen()),
+        ),
+        borderRadius: BorderRadius.circular(16),
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Row(
+            children: [
+              Container(
+                width: 48,
+                height: 48,
+                decoration: const BoxDecoration(
+                  color: Color(0xFFD96A00),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.pets_rounded,
+                  size: 26,
+                  color: Color(0xFF1C1A27),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      n.titulo,
+                      style: GoogleFonts.poppins(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: const Color(0xFF1C1A27),
+                      ),
+                    ),
+                    Text(
+                      n.mensagem,
+                      style: GoogleFonts.poppins(
+                        fontSize: 13,
+                        color: const Color(0xFF1C1A27),
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    SeloNivel(nivel: nivel, comTitulo: true),
+                  ],
+                ),
+              ),
+              if (!n.lida)
+                Container(
+                  width: 8,
+                  height: 8,
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final n = notificacao;
+    final patente = Nivel.values
+        .where((v) => v.name == n.patente && v != Nivel.iniciante)
+        .firstOrNull;
+    if (patente != null) return _cartaoPatente(context, patente);
     final encontrado = n.tipo == Notificacao.tipoEncontrado;
     final ajuda = n.tipo == Notificacao.tipoAjuda;
     final cor = ajuda
@@ -151,23 +232,26 @@ class _CartaoNotificacao extends StatelessWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: cor.withValues(alpha: 0.12),
-                  shape: BoxShape.circle,
+              if (n.tipo == Notificacao.tipoAvistamento && n.autorId.isNotEmpty)
+                _AvatarComNivel(uid: n.autorId)
+              else
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: cor.withValues(alpha: 0.12),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    ajuda
+                        ? Icons.emoji_events_outlined
+                        : encontrado
+                        ? Icons.favorite_rounded
+                        : Icons.visibility_outlined,
+                    size: 20,
+                    color: cor,
+                  ),
                 ),
-                child: Icon(
-                  ajuda
-                      ? Icons.emoji_events_outlined
-                      : encontrado
-                      ? Icons.favorite_rounded
-                      : Icons.visibility_outlined,
-                  size: 20,
-                  color: cor,
-                ),
-              ),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
@@ -352,6 +436,56 @@ class _CartaoDica extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Foto de quem enviou, com a etiqueta "NÍVEL 2 • PRATA" embaixo.
+class _AvatarComNivel extends StatefulWidget {
+  final String uid;
+
+  const _AvatarComNivel({required this.uid});
+
+  @override
+  State<_AvatarComNivel> createState() => _AvatarComNivelState();
+}
+
+class _AvatarComNivelState extends State<_AvatarComNivel> {
+  late final Stream<PerfilPublico?> _perfil = PerfilService().perfil(
+    widget.uid,
+  );
+  late final Stream<Nivel> _nivel = PrestigioService().nivel(widget.uid);
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 64,
+      child: StreamBuilder<Nivel>(
+        stream: _nivel,
+        builder: (context, snapN) {
+          final nivel = snapN.data ?? Nivel.iniciante;
+          return Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              StreamBuilder<PerfilPublico?>(
+                stream: _perfil,
+                builder: (context, snapP) => MolduraNivel(
+                  nivel: nivel,
+                  espessura: 2,
+                  child: AvatarPerfil(perfil: snapP.data, raio: 22),
+                ),
+              ),
+              if (nivel != Nivel.iniciante)
+                Transform.translate(
+                  offset: const Offset(0, -6),
+                  child: FittedBox(
+                    child: SeloNivel(nivel: nivel, tamanhoFonte: 8),
+                  ),
+                ),
+            ],
+          );
+        },
       ),
     );
   }

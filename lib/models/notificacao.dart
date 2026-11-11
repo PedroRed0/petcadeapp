@@ -14,6 +14,9 @@ class Notificacao {
   final String petId;
   final String telefone; // contato de quem viu o pet (opcional)
   final bool lida;
+
+  /// Nível alcançado (ex.: "bronze") quando a ajuda desbloqueou uma patente.
+  final String patente;
   final DateTime criadoEm;
 
   const Notificacao({
@@ -26,6 +29,7 @@ class Notificacao {
     this.petId = '',
     this.telefone = '',
     this.lida = false,
+    this.patente = '',
     required this.criadoEm,
   });
 
@@ -42,6 +46,7 @@ class Notificacao {
       petId: data['petId']?.toString() ?? '',
       telefone: data['telefone']?.toString() ?? '',
       lida: data['lida'] == true,
+      patente: data['patente']?.toString() ?? '',
       criadoEm: criado is Timestamp ? criado.toDate() : DateTime.now(),
     );
   }

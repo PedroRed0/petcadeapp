@@ -10,6 +10,7 @@ import '../../services/pet_service.dart';
 import '../../services/usuario_service.dart';
 import '../cadastro_pet_screen.dart';
 import '../detalhes_pet_screen.dart';
+import '../encontrado_flow.dart';
 import 'alterar_local_screen.dart';
 
 class MeusAnunciosScreen extends StatefulWidget {
@@ -82,8 +83,7 @@ class _MeusAnunciosScreenState extends State<MeusAnunciosScreen> {
             MaterialPageRoute(builder: (_) => AlterarLocalScreen(pet: pet)),
           );
         case 'encontrado':
-          await servico.marcarEncontrado(pet);
-          if (mounted) mostrarAviso(context, 'Que ótima notícia! 🎉');
+          await marcarComoEncontrado(context, pet);
         case 'reativar':
           await servico.reativar(pet);
         case 'excluir':

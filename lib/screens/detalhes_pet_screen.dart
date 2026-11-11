@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+
+import 'chat/chat_screen.dart';
+import 'encontrado_flow.dart';
+
 import 'package:google_fonts/google_fonts.dart';
 import 'package:share_plus/share_plus.dart';
 
@@ -111,21 +115,11 @@ class _DetalhesPetScreenState extends State<DetalhesPetScreen> {
     }
   }
 
-  Future<void> _marcarEncontrado(Pet pet) async {
-    final ok = await confirmar(
-      context,
-      titulo: 'Pet encontrado?',
-      texto:
-          'O anúncio de ${pet.nome} vai para "Finalizados" e sai das buscas.',
-      acao: 'Sim, foi encontrado',
-    );
-    if (!ok) return;
-    try {
-      await PetService().marcarEncontrado(pet);
-      if (mounted) mostrarAviso(context, 'Que ótima notícia! 🎉');
-    } catch (e) {
-      if (mounted) mostrarAviso(context, 'Erro: $e');
-    }
+  Future<void> _marcarEncontrado(Pet pet) => marcarComoEncontrado(context, pet);
+
+  Future<void> _conversar(Pet pet) async {
+    if (!await exigirEmailConfirmado(context) || !mounted) return;
+    await abrirConversaCom(context, pet.donoId, pet: pet);
   }
 
   @override
@@ -310,6 +304,28 @@ class _DetalhesPetScreenState extends State<DetalhesPetScreen> {
                       ),
                     ),
                   ),
+                  if (!souDono && pet.donoId.isNotEmpty) ...[
+                    const SizedBox(width: 10),
+                    SizedBox(
+                      width: 52,
+                      height: 52,
+                      child: OutlinedButton(
+                        onPressed: () => _conversar(pet),
+                        style: OutlinedButton.styleFrom(
+                          padding: EdgeInsets.zero,
+                          minimumSize: const Size(52, 52),
+                          shape: const CircleBorder(),
+                        ),
+                        child: const Tooltip(
+                          message: 'Conversar com o tutor',
+                          child: Icon(
+                            Icons.chat_bubble_outline_rounded,
+                            size: 20,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                   const SizedBox(width: 12),
                   Expanded(
                     child: pet.perdido

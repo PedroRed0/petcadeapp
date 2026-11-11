@@ -4,6 +4,8 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/widgets/avatar_usuario.dart';
 import '../../core/widgets/comuns.dart';
+import '../../core/widgets/selo_nivel.dart';
+import '../chat/conversas_screen.dart';
 import '../../models/pet.dart';
 import '../../models/usuario.dart';
 import '../../services/auth_service.dart';
@@ -115,7 +117,15 @@ class _PerfilScreenState extends State<PerfilScreen> {
                   ),
                 ],
               ),
-              const SizedBox(height: 28),
+              const SizedBox(height: 24),
+              CartaoPrestigio(uid: UsuarioService().uid ?? ''),
+              const SizedBox(height: 10),
+              LinhaOpcao(
+                icone: Icons.chat_bubble_outline_rounded,
+                titulo: 'Mensagens',
+                onTap: () => _abrir(const ConversasScreen()),
+              ),
+              const SizedBox(height: 10),
               StreamBuilder<List<Pet>>(
                 stream: _meus,
                 builder: (context, s) {

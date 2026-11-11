@@ -12,7 +12,9 @@ import '../models/usuario.dart';
 import '../services/localizacao_service.dart';
 import '../services/pet_service.dart';
 import '../services/usuario_service.dart';
+import '../services/chat_service.dart';
 import 'animais_perdidos_screen.dart';
+import 'chat/conversas_screen.dart';
 import 'detalhes_pet_screen.dart';
 import 'main_shell.dart';
 import 'mapa_screen.dart';
@@ -29,6 +31,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   late final Stream<List<Pet>> _pets;
   late final Stream<Usuario?> _usuario;
+  late final Stream<int> _mensagensNaoLidas = ChatService().naoLidas();
 
   @override
   void initState() {
@@ -86,6 +89,24 @@ class _HomeScreenState extends State<HomeScreen> {
                             ],
                           );
                         },
+                      ),
+                    ),
+                    StreamBuilder<int>(
+                      stream: _mensagensNaoLidas,
+                      builder: (context, snap) => IconButton(
+                        tooltip: 'Mensagens',
+                        onPressed: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const ConversasScreen(),
+                          ),
+                        ),
+                        icon: Badge(
+                          isLabelVisible: (snap.data ?? 0) > 0,
+                          backgroundColor: AppColors.perdido,
+                          label: Text('${snap.data ?? 0}'),
+                          child: const Icon(Icons.chat_bubble_outline_rounded),
+                        ),
                       ),
                     ),
                     StreamBuilder<int>(

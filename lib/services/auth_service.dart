@@ -5,6 +5,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 
 import '../config.dart';
 import 'firebase_refs.dart';
+import 'perfil_service.dart';
 
 /// Login com e-mail/senha e com Google (Firebase Authentication — grátis).
 class AuthService {
@@ -97,7 +98,10 @@ class AuthService {
     if (user == null) return;
     final doc = Fb.db.collection('usuarios').doc(user.uid);
     final atual = await doc.get();
-    if (atual.exists) return;
+    if (atual.exists) {
+      await PerfilService().sincronizar();
+      return;
+    }
     await doc.set({
       'nome': user.displayName ?? '',
       'email': user.email ?? '',
@@ -106,6 +110,7 @@ class AuthService {
       'favoritos': <String>[],
       'criadoEm': FieldValue.serverTimestamp(),
     });
+    await PerfilService().sincronizar();
   }
 
   Future<void> criarConta({

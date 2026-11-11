@@ -46,6 +46,9 @@ dependencies:
   share_plus: ^13.3.1
   google_sign_in: ^7.2.0
   http: ^1.6.0
+  record: ^7.2.0
+  audioplayers: ^6.8.1
+  path_provider: ^2.1.6
 
 dev_dependencies:
   flutter_test:

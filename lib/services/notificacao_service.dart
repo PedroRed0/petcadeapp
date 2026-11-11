@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/notificacao.dart';
 import '../models/pet.dart';
 import 'firebase_refs.dart';
+import 'prestigio_service.dart';
 
 /// Notificações dentro do app, guardadas no Firestore (grátis).
 class NotificacaoService {
@@ -67,5 +68,8 @@ class NotificacaoService {
       'lida': false,
       'criadoEm': FieldValue.serverTimestamp(),
     });
+    try {
+      await PrestigioService().registrarInteresse(pet);
+    } catch (_) {}
   }
 }

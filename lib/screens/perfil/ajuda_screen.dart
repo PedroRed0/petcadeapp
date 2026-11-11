@@ -23,6 +23,14 @@ class AjudaScreen extends StatelessWidget {
       'Vá em Perfil > Meus anúncios, toque no anúncio e escolha "Marcar como encontrado". Quem salvou o anúncio também será avisado.',
     ),
     (
+      'Como funciona o prestígio?',
+      'Quando um tutor marca o pet como encontrado, ele escolhe quem ajudou (quem avisou "Eu vi este pet" ou conversou pelo anúncio). Cada ajuda vale +1. Níveis: 🥉 Bronze (5), 🥈 Prata (10), 🥇 Ouro (20) e 💎 Diamante (50).',
+    ),
+    (
+      'Como converso com o tutor de um pet?',
+      'Abra o anúncio e toque no balão de conversa, ao lado do botão principal. Suas conversas ficam no ícone de mensagens da tela inicial. Dá para mandar texto, emojis, fotos e áudios de até 1 minuto.',
+    ),
+    (
       'Vi um anúncio suspeito. O que faço?',
       'Abra o anúncio e toque na bandeira no topo para denunciar. A denúncia é anônima. Nunca faça pagamentos antecipados a quem diz ter encontrado seu pet.',
     ),

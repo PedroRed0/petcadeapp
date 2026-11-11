@@ -66,9 +66,8 @@ Widget envolverApp(BuildContext context, Widget? child) {
       child: SizedBox(
         width: 440,
         child: MediaQuery(
-          data: MediaQuery.of(context).copyWith(
-            size: Size(440, MediaQuery.sizeOf(context).height),
-          ),
+          data: MediaQuery.of(context)
+              .copyWith(size: Size(440, MediaQuery.sizeOf(context).height)),
           child: ClipRect(child: app),
         ),
       ),

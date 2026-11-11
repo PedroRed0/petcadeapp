@@ -121,11 +121,81 @@ service cloud.firestore {
             && verificado()
             && get(caminhoPet(request.resource.data.petId)).data.get('donoId', '')
                  == request.resource.data.paraId)
+          || (request.resource.data.tipo == 'ajuda'
+            && get(caminhoPet(request.resource.data.petId)).data.get('donoId', '') == eu()
+            && getAfter(/databases/$(database)/documents/ajudas/$(request.resource.data.petId)).data.ajudanteId
+                 == request.resource.data.paraId)
           || (request.resource.data.tipo == 'encontrado'
             && get(caminhoPet(request.resource.data.petId)).data.get('donoId', '') == eu()
             && request.resource.data.paraId
                  in get(caminhoPet(request.resource.data.petId)).data.get('seguidores', []))
         );
+    }
+
+    // ---------- Perfis públicos (nome curto e foto, para o bate-papo) ----------
+    match /perfis/{uid} {
+      allow read: if logado();
+      allow write: if logado() && uid == eu()
+        && request.resource.data.keys().hasOnly(['nome', 'foto', 'fotoUrl'])
+        && request.resource.data.nome is string
+        && request.resource.data.nome.size() <= 60
+        && request.resource.data.foto.size() <= 250000;
+    }
+
+    // ---------- Prestígio ----------
+    // Quem avisou "Eu vi" ou conversou pelo anúncio. Id: "<petId>_<uid>".
+    match /interessados/{id} {
+      allow read: if logado()
+        && (resource.data.uid == eu() || resource.data.donoId == eu());
+      allow create: if logado()
+        && id == request.resource.data.petId + '_' + eu()
+        && request.resource.data.uid == eu()
+        && request.resource.data.donoId != eu()
+        && request.resource.data.donoId
+             == get(caminhoPet(request.resource.data.petId)).data.get('donoId', '');
+    }
+
+    // Uma "ajuda" por pet (id = id do pet): o tutor credita quem ajudou,
+    // e só pode escolher alguém que avisou ou conversou sobre o pet.
+    match /ajudas/{petId} {
+      allow read: if logado();
+      allow create: if logado()
+        && request.resource.data.petId == petId
+        && request.resource.data.donoId == eu()
+        && get(caminhoPet(petId)).data.get('donoId', '') == eu()
+        && request.resource.data.ajudanteId != eu()
+        && exists(/databases/$(database)/documents/interessados/$(petId + '_' + request.resource.data.ajudanteId));
+    }
+
+    // ---------- Bate-papo ----------
+    // Id da conversa: "<uidMenor>_<uidMaior>". Só os dois participantes entram.
+    match /conversas/{cid} {
+      allow get: if logado() && eu() in cid.split('_');
+      allow list: if logado() && eu() in resource.data.participantes;
+
+      allow create: if logado()
+        && request.resource.data.participantes.size() == 2
+        && eu() in request.resource.data.participantes
+        && request.resource.data.participantes[0] < request.resource.data.participantes[1]
+        && cid == request.resource.data.participantes[0] + '_'
+                  + request.resource.data.participantes[1];
+
+      allow update: if logado()
+        && eu() in resource.data.participantes
+        && alterados().hasOnly(['ultimaMensagem', 'ultimoAutor', 'ultimoEnvio', 'lidaPor'])
+        && request.resource.data.ultimoAutor in ['', resource.data.ultimoAutor, eu()]
+        && request.resource.data.ultimaMensagem.size() <= 200;
+
+      match /mensagens/{mid} {
+        allow read: if logado() && eu() in cid.split('_');
+        allow create: if logado()
+          && eu() in cid.split('_')
+          && exists(/databases/$(database)/documents/conversas/$(cid))
+          && request.resource.data.autorId == eu()
+          && request.resource.data.tipo in ['texto', 'imagem', 'audio']
+          && request.resource.data.get('texto', '').size() <= 2000
+          && request.resource.data.get('dados', '').size() <= 600000;
+      }
     }
   }
 }

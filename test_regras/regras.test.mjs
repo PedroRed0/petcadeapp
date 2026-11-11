@@ -119,6 +119,63 @@ await caso('dono não altera o texto da notificação', () => assertFails(update
 await caso('dono lista as próprias notificações', () => assertSucceeds(getDocs(query(collection(dono, 'notificacoes'), where('paraId', '==', 'pedro')))));
 await caso('dono lista os próprios anúncios', () => assertSucceeds(getDocs(query(collection(dono, 'pets_perdidos'), where('donoId', '==', 'pedro')))));
 
+console.log('\nPerfis públicos');
+await preparar();
+const perfil = { nome: 'Ana S.', foto: '', fotoUrl: '' };
+await caso('cada um publica o próprio perfil público', () => assertSucceeds(setDoc(doc(ana, 'perfis/ana'), perfil)));
+await caso('logado lê perfil público de outra pessoa', () => assertSucceeds(getDoc(doc(dono, 'perfis/ana'))));
+await caso('não publica perfil em nome de outra pessoa', () => assertFails(setDoc(doc(ana, 'perfis/pedro'), perfil)));
+await caso('perfil público não aceita e-mail/telefone', () => assertFails(setDoc(doc(ana, 'perfis/ana'), { ...perfil, email: 'a@x.com' })));
+
+console.log('\nPrestígio');
+await preparar();
+const interesse = (uid, petId = 'nina', donoId = 'pedro') => ({ petId, uid, donoId, criadoEm: new Date() });
+const ajuda = (ajudanteId, petId = 'nina') => ({ petId, petNome: 'Nina', ajudanteId, donoId: 'pedro', criadoEm: new Date() });
+await caso('Ana vira interessada no anúncio do Pedro', () => assertSucceeds(setDoc(doc(ana, 'interessados/nina_ana'), interesse('ana'))));
+await caso('não registra interesse em nome de outra pessoa', () => assertFails(setDoc(doc(ana, 'interessados/nina_ze'), interesse('ze'))));
+await caso('dono não vira interessado no próprio anúncio', () => assertFails(setDoc(doc(dono, 'interessados/nina_pedro'), interesse('pedro'))));
+await caso('não mente quem é o dono', () => assertFails(setDoc(doc(ze, 'interessados/nina_ze'), interesse('ze', 'nina', 'ana'))));
+await caso('dono lista os interessados do anúncio', () => assertSucceeds(getDocs(query(collection(dono, 'interessados'), where('donoId', '==', 'pedro'), where('petId', '==', 'nina')))));
+await caso('outra pessoa não lista interessados do Pedro', () => assertFails(getDocs(query(collection(ze, 'interessados'), where('donoId', '==', 'pedro')))));
+await caso('dono NÃO credita quem não avisou/conversou', () => assertFails(setDoc(doc(dono, 'ajudas/nina'), ajuda('ze'))));
+await caso('Ana NÃO credita a si mesma', () => assertFails(setDoc(doc(ana, 'ajudas/nina'), { ...ajuda('ana'), donoId: 'ana' })));
+const creditar = (db) => {
+  const b = writeBatch(db);
+  b.set(doc(db, 'ajudas/nina'), ajuda('ana'));
+  b.set(doc(collection(db, 'notificacoes')), { paraId: 'ana', autorId: 'pedro', tipo: 'ajuda', titulo: 'x', mensagem: 'Obrigado', petId: 'nina', lida: false, criadoEm: new Date() });
+  return b.commit();
+};
+await caso('dono credita a Ana (ajuda + notificação)', () => assertSucceeds(creditar(dono)));
+await caso('não dá para creditar duas vezes o mesmo pet', () => assertFails(creditar(dono)));
+await caso('qualquer logado vê o prestígio (contagem de ajudas)', () => assertSucceeds(getDocs(query(collection(ze, 'ajudas'), where('ajudanteId', '==', 'ana')))));
+await caso('notificação "ajuda" falsa é bloqueada', () => assertFails(addDoc(collection(ze, 'notificacoes'), { paraId: 'ze', autorId: 'ze', tipo: 'ajuda', mensagem: 'x', petId: 'nina' })));
+
+console.log('\nBate-papo');
+await preparar();
+const conversa = { participantes: ['ana', 'pedro'], ultimaMensagem: '', ultimoAutor: '', lidaPor: {}, petNome: 'Nina', criadoEm: new Date() };
+await caso('Ana abre conversa com o Pedro', () => assertSucceeds(setDoc(doc(ana, 'conversas/ana_pedro'), conversa)));
+await caso('não cria conversa entre outras duas pessoas', () => assertFails(setDoc(doc(ze, 'conversas/ana_pedro2'), { ...conversa, participantes: ['ana', 'pedro2'] })));
+await caso('id da conversa precisa bater com os participantes', () => assertFails(setDoc(doc(ze, 'conversas/x_ze'), { ...conversa, participantes: ['ana', 'ze'] })));
+await caso('Pedro lê a conversa', () => assertSucceeds(getDoc(doc(dono, 'conversas/ana_pedro'))));
+await caso('Zé NÃO lê a conversa dos dois', () => assertFails(getDoc(doc(ze, 'conversas/ana_pedro'))));
+await caso('cada um lista só as próprias conversas', () => assertSucceeds(getDocs(query(collection(ana, 'conversas'), where('participantes', 'array-contains', 'ana')))));
+await caso('Zé NÃO lista conversas da Ana', () => assertFails(getDocs(query(collection(ze, 'conversas'), where('participantes', 'array-contains', 'ana')))));
+const enviar = (db, autorId, extra = {}) => {
+  const b = writeBatch(db);
+  b.set(doc(collection(db, 'conversas/ana_pedro/mensagens')), { autorId, tipo: 'texto', texto: 'Oi! Vi sua gata', criadoEm: new Date(), ...extra });
+  b.update(doc(db, 'conversas/ana_pedro'), { ultimaMensagem: 'Oi! Vi sua gata', ultimoAutor: autorId, ultimoEnvio: new Date() });
+  return b.commit();
+};
+await caso('Ana manda mensagem', () => assertSucceeds(enviar(ana, 'ana')));
+await caso('Pedro responde', () => assertSucceeds(enviar(dono, 'pedro')));
+await caso('Ana NÃO manda mensagem como se fosse o Pedro', () => assertFails(enviar(ana, 'pedro')));
+await caso('Zé NÃO manda mensagem na conversa dos dois', () => assertFails(addDoc(collection(ze, 'conversas/ana_pedro/mensagens'), { autorId: 'ze', tipo: 'texto', texto: 'oi' })));
+await caso('Zé NÃO lê as mensagens dos dois', () => assertFails(getDocs(collection(ze, 'conversas/ana_pedro/mensagens'))));
+await caso('Pedro lê as mensagens', () => assertSucceeds(getDocs(collection(dono, 'conversas/ana_pedro/mensagens'))));
+await caso('Pedro marca como lida', () => assertSucceeds(updateDoc(doc(dono, 'conversas/ana_pedro'), { 'lidaPor.pedro': new Date() })));
+await caso('não troca os participantes da conversa', () => assertFails(updateDoc(doc(ana, 'conversas/ana_pedro'), { participantes: ['ana', 'ze'] })));
+await caso('áudio/foto acima do limite é bloqueado', () => assertFails(enviar(ana, 'ana', { tipo: 'imagem', texto: '', dados: 'x'.repeat(600001) })));
+
 await env.cleanup();
 console.log(`\n${ok} passaram, ${falhas} falharam`);
 process.exit(falhas ? 1 : 0);

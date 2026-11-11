@@ -72,5 +72,7 @@
 	<string>Usamos a câmera para tirar fotos do pet no cadastro.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Usamos a galeria para você escolher fotos do pet.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Usamos o microfone para gravar mensagens de áudio no bate-papo.</string>
 </dict>
 </plist>

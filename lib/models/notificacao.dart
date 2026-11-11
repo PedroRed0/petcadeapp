@@ -3,9 +3,11 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 class Notificacao {
   static const tipoAvistamento = 'avistamento';
   static const tipoEncontrado = 'encontrado';
+  static const tipoAjuda = 'ajuda';
 
   final String id;
   final String paraId;
+  final String autorId;
   final String tipo;
   final String titulo;
   final String mensagem;
@@ -17,6 +19,7 @@ class Notificacao {
   const Notificacao({
     required this.id,
     required this.paraId,
+    this.autorId = '',
     required this.tipo,
     required this.titulo,
     required this.mensagem,
@@ -32,6 +35,7 @@ class Notificacao {
     return Notificacao(
       id: doc.id,
       paraId: data['paraId']?.toString() ?? '',
+      autorId: data['autorId']?.toString() ?? '',
       tipo: data['tipo']?.toString() ?? '',
       titulo: data['titulo']?.toString() ?? '',
       mensagem: data['mensagem']?.toString() ?? '',

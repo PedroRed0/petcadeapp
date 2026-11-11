@@ -5,22 +5,30 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../../models/perfil_publico.dart';
 import '../../models/usuario.dart';
 import '../../services/usuario_service.dart';
 import '../theme/app_colors.dart';
 import 'comuns.dart';
 
-/// Foto redonda do usuário (foto do app → foto do Google → inicial do nome).
-class AvatarUsuario extends StatelessWidget {
-  final Usuario? usuario;
+/// Foto redonda (foto do app → foto do Google → inicial do nome).
+class AvatarFoto extends StatelessWidget {
+  final String nome;
+  final String foto; // base64
+  final String fotoUrl;
   final double raio;
 
-  const AvatarUsuario({super.key, required this.usuario, this.raio = 34});
+  const AvatarFoto({
+    super.key,
+    required this.nome,
+    this.foto = '',
+    this.fotoUrl = '',
+    this.raio = 34,
+  });
 
   static final Map<int, Uint8List> _cache = {};
 
   Uint8List? _bytes() {
-    final foto = usuario?.foto ?? '';
     if (foto.isEmpty) return null;
     try {
       return _cache[foto.hashCode] ??= base64Decode(foto);
@@ -32,10 +40,9 @@ class AvatarUsuario extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bytes = _bytes();
-    final url = usuario?.fotoUrl ?? '';
-    final nome = usuario?.nome.trim() ?? '';
+    final n = nome.trim();
     final inicial = Text(
-      nome.isEmpty ? '?' : nome[0].toUpperCase(),
+      n.isEmpty ? '?' : n[0].toUpperCase(),
       style: GoogleFonts.poppins(
         fontSize: raio * 0.75,
         fontWeight: FontWeight.w700,
@@ -48,13 +55,46 @@ class AvatarUsuario extends StatelessWidget {
       backgroundColor: AppColors.fundoDestaque(context),
       foregroundImage: bytes != null
           ? MemoryImage(bytes)
-          : (url.isNotEmpty ? NetworkImage(url) : null) as ImageProvider?,
-      onForegroundImageError: bytes != null || url.isNotEmpty
+          : (fotoUrl.isNotEmpty ? NetworkImage(fotoUrl) : null)
+                as ImageProvider?,
+      onForegroundImageError: bytes != null || fotoUrl.isNotEmpty
           ? (_, _) {}
           : null,
       child: inicial,
     );
   }
+}
+
+/// Foto do usuário logado.
+class AvatarUsuario extends StatelessWidget {
+  final Usuario? usuario;
+  final double raio;
+
+  const AvatarUsuario({super.key, required this.usuario, this.raio = 34});
+
+  @override
+  Widget build(BuildContext context) => AvatarFoto(
+    nome: usuario?.nome ?? '',
+    foto: usuario?.foto ?? '',
+    fotoUrl: usuario?.fotoUrl ?? '',
+    raio: raio,
+  );
+}
+
+/// Foto de outra pessoa (perfil público).
+class AvatarPerfil extends StatelessWidget {
+  final PerfilPublico? perfil;
+  final double raio;
+
+  const AvatarPerfil({super.key, required this.perfil, this.raio = 24});
+
+  @override
+  Widget build(BuildContext context) => AvatarFoto(
+    nome: perfil?.nome ?? '',
+    foto: perfil?.foto ?? '',
+    fotoUrl: perfil?.fotoUrl ?? '',
+    raio: raio,
+  );
 }
 
 /// Abre as opções (câmera / galeria / remover) e salva a nova foto.

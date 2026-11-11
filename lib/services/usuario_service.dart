@@ -5,6 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../models/usuario.dart';
 import 'firebase_refs.dart';
+import 'perfil_service.dart';
 
 class UsuarioService {
   CollectionReference<Map<String, dynamic>> get _colecao =>
@@ -41,6 +42,7 @@ class UsuarioService {
       'telefone': telefone.trim(),
       'email': Fb.auth.currentUser?.email ?? '',
     }, SetOptions(merge: true));
+    await PerfilService().sincronizar();
   }
 
   /// Troca a foto de perfil (já reduzida). Passe null para remover.
@@ -55,6 +57,7 @@ class UsuarioService {
       // Ao remover, também esquece a foto do Google.
       if (bytes == null) 'fotoUrl': '',
     }, SetOptions(merge: true));
+    await PerfilService().sincronizar();
   }
 
   /// Salva / tira dos salvos. Guarda no perfil (para "Animais salvos") e

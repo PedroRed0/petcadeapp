@@ -55,6 +55,10 @@ class TextoScreen extends StatelessWidget {
       'Os anúncios ficam visíveis para os usuários do app, apenas com o seu primeiro nome. Seu e-mail e telefone ficam protegidos: nenhum outro usuário consegue vê-los. O telefone só é compartilhado quando você mesmo o informa ao avisar que viu um pet.',
     ),
     (
+      'Bate-papo',
+      'As mensagens (texto, fotos e áudios) só podem ser lidas pelas duas pessoas da conversa. No bate-papo aparecem apenas o seu nome curto (ex.: "Pedro R.") e a sua foto de perfil.',
+    ),
+    (
       'Localização',
       'Usamos sua localização apenas no aparelho, para mostrar a distância até os animais e marcar o local no cadastro. Ela não é salva no seu perfil.',
     ),

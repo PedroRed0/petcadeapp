@@ -7,6 +7,7 @@ import '../core/widgets/comuns.dart';
 import '../models/notificacao.dart';
 import '../services/notificacao_service.dart';
 import '../services/pet_service.dart';
+import 'chat/chat_screen.dart';
 import 'detalhes_pet_screen.dart';
 
 class NotificacoesScreen extends StatefulWidget {
@@ -125,7 +126,12 @@ class _CartaoNotificacao extends StatelessWidget {
   Widget build(BuildContext context) {
     final n = notificacao;
     final encontrado = n.tipo == Notificacao.tipoEncontrado;
-    final cor = encontrado ? AppColors.encontrado : AppColors.destaque(context);
+    final ajuda = n.tipo == Notificacao.tipoAjuda;
+    final cor = ajuda
+        ? const Color(0xFFD9A400)
+        : encontrado
+        ? AppColors.encontrado
+        : AppColors.destaque(context);
     final tema = Theme.of(context);
 
     return Material(
@@ -153,7 +159,9 @@ class _CartaoNotificacao extends StatelessWidget {
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
-                  encontrado
+                  ajuda
+                      ? Icons.emoji_events_outlined
+                      : encontrado
                       ? Icons.favorite_rounded
                       : Icons.visibility_outlined,
                   size: 20,
@@ -226,6 +234,25 @@ class _CartaoNotificacao extends StatelessWidget {
                             ),
                           ),
                         ],
+                      ),
+                    ],
+                    if (n.tipo == Notificacao.tipoAvistamento &&
+                        n.autorId.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Align(
+                        alignment: Alignment.centerLeft,
+                        child: TextButton.icon(
+                          style: TextButton.styleFrom(
+                            padding: EdgeInsets.zero,
+                            visualDensity: VisualDensity.compact,
+                          ),
+                          onPressed: () => abrirConversaCom(context, n.autorId),
+                          icon: const Icon(
+                            Icons.chat_bubble_outline_rounded,
+                            size: 16,
+                          ),
+                          label: const Text('Conversar'),
+                        ),
                       ),
                     ],
                   ],

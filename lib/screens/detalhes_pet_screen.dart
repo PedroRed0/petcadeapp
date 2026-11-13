@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import 'chat/chat_screen.dart';
 import 'encontrado_flow.dart';
+import 'mapa_screen.dart';
 
 import 'package:google_fonts/google_fonts.dart';
 import 'package:share_plus/share_plus.dart';
@@ -367,6 +368,25 @@ class _DetalhesPetScreenState extends State<DetalhesPetScreen> {
       backgroundColor: AppColors.roxoEscuro,
       foregroundColor: Colors.white,
       actions: [
+        if (pet.temLocal)
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: CircleAvatar(
+              backgroundColor: Colors.black.withValues(alpha: 0.3),
+              child: IconButton(
+                tooltip: 'Ver no mapa',
+                icon: const Icon(
+                  Icons.map_outlined,
+                  size: 18,
+                  color: Colors.white,
+                ),
+                onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => MapaScreen(foco: pet)),
+                ),
+              ),
+            ),
+          ),
         if (!souDono && pet.id != null)
           Padding(
             padding: const EdgeInsets.all(8),

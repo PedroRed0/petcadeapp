@@ -17,7 +17,10 @@ import 'detalhes_pet_screen.dart';
 class MapaScreen extends StatefulWidget {
   final String especieInicial;
 
-  const MapaScreen({super.key, this.especieInicial = 'Todos'});
+  /// Abre o mapa já centralizado neste pet (botão da página do pet).
+  final Pet? foco;
+
+  const MapaScreen({super.key, this.especieInicial = 'Todos', this.foco});
 
   @override
   State<MapaScreen> createState() => _MapaScreenState();
@@ -34,6 +37,13 @@ class _MapaScreenState extends State<MapaScreen> {
     super.initState();
     _pets = PetService().listarPets();
     _especie = widget.especieInicial;
+    final foco = widget.foco;
+    if (foco != null && foco.temLocal) {
+      // Mostra o card do pet assim que o mapa aparece.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _abrirPreview(foco);
+      });
+    }
   }
 
   @override
@@ -62,8 +72,12 @@ class _MapaScreenState extends State<MapaScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final inicio =
-        LocalizacaoService.instancia.posicao.value ?? LocalizacaoService.padrao;
+    final foco = widget.foco;
+    final focoNoMapa = foco != null && foco.temLocal;
+    final inicio = focoNoMapa
+        ? LatLng(foco.latitude, foco.longitude)
+        : LocalizacaoService.instancia.posicao.value ??
+              LocalizacaoService.padrao;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Mapa de casos')),
@@ -84,7 +98,7 @@ class _MapaScreenState extends State<MapaScreen> {
                   mapController: _mapa,
                   options: MapOptions(
                     initialCenter: inicio,
-                    initialZoom: 13,
+                    initialZoom: focoNoMapa ? 16 : 13,
                     minZoom: 4,
                     maxZoom: 18,
                   ),
@@ -130,10 +144,18 @@ class _MapaScreenState extends State<MapaScreen> {
                     StreamBuilder<List<Pet>>(
                       stream: _pets,
                       builder: (context, snap) {
-                        final pets = FiltroPets(
-                          especie: _especie,
-                          texto: _busca.text.trim(),
-                        ).aplicar(snap.data ?? []).where((p) => p.temLocal);
+                        final pets =
+                            FiltroPets(
+                                  especie: _especie,
+                                  texto: _busca.text.trim(),
+                                )
+                                .aplicar(snap.data ?? [])
+                                .where((p) => p.temLocal)
+                                .toList();
+                        // O pet em foco aparece mesmo fora dos filtros.
+                        if (focoNoMapa && !pets.any((p) => p.id == foco.id)) {
+                          pets.add(foco);
+                        }
                         return MarkerLayer(
                           markers: pets
                               .map(

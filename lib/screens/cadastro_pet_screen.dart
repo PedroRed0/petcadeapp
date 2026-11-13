@@ -589,6 +589,29 @@ class _CadastroPetScreenState extends State<CadastroPetScreen> {
         ),
         const SizedBox(height: 12),
         if (previa != null) PetCard(pet: previa),
+        if (_ponto != null) ...[
+          const SizedBox(height: 16),
+          Text(
+            'Local onde foi visto',
+            style: GoogleFonts.poppins(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 6),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: SizedBox(
+              height: 170,
+              child: MapaMiniatura(key: ValueKey(_ponto), ponto: _ponto!),
+            ),
+          ),
+          TextButton.icon(
+            onPressed: () => setState(() => _etapa = 2),
+            icon: const Icon(Icons.edit_location_alt_outlined, size: 18),
+            label: const Text('Não é aqui? Corrigir o local'),
+          ),
+        ],
         const SizedBox(height: 16),
         for (final (rotulo, valor) in linhas)
           Padding(

@@ -20,6 +20,9 @@ import 'package:petcade/services/localizacao_service.dart';
 
 // Coordenadas aproximadas da Vila Sônia (zona Oeste de SP)
 const _vilaSonia = LatLng(-23.5970, -46.7340);
+// José Bonifácio: o município no interior e o bairro da Zona Leste de SP
+const _joseBonifacioCidade = LatLng(-21.0550, -49.6880);
+const _joseBonifacioBairro = LatLng(-23.5480, -46.4370);
 // "Minha posição" (Itaquera, zona Leste) — o pet NÃO pode ficar aqui
 const _minhaPosicao = LatLng(-23.5400, -46.4560);
 
@@ -53,6 +56,25 @@ http.Client _clienteFalso() => MockClient((req) async {
   }
   if (req.url.host == 'nominatim.openstreetmap.org') {
     final q = (req.url.queryParameters['q'] ?? '').toLowerCase();
+    if (q.contains('josé bonifácio') || q.contains('jose bonifacio')) {
+      return http.Response.bytes(
+        utf8.encode(
+          jsonEncode([
+            {
+              'lat': '${_joseBonifacioCidade.latitude}',
+              'lon': '${_joseBonifacioCidade.longitude}',
+              'display_name': 'José Bonifácio, Região Imediata de São José do Rio Preto, São Paulo, Região Sudeste, Brasil',
+            },
+            {
+              'lat': '${_joseBonifacioBairro.latitude}',
+              'lon': '${_joseBonifacioBairro.longitude}',
+              'display_name': 'José Bonifácio, São Paulo, Região Metropolitana de São Paulo, São Paulo, Região Sudeste, 08250-000, Brasil',
+            },
+          ]),
+        ),
+        200,
+      );
+    }
     if (q.contains('vila sônia') || q.contains('vila sonia')) {
       return http.Response.bytes(
         utf8.encode(
@@ -179,7 +201,10 @@ void main() {
           'Vila Sônia - SP',
         );
         await t.tap(find.text('Próximo'));
-        await esperar(t); // localiza sozinho e vai para Confirmar
+        await esperar(t); // localiza sozinho e pede confirmação
+        expect(find.text('Tem certeza que é este o local?'), findsOneWidget);
+        await t.tap(find.text('Sim, é aqui'));
+        await esperar(t); // → Confirmar
         expect(find.text('Publicar anúncio'), findsOneWidget);
 
         await t.tap(find.text('Publicar anúncio'));
@@ -223,6 +248,9 @@ void main() {
       );
       await t.tap(find.byTooltip('Buscar CEP'));
       await esperar(t);
+      expect(find.text('Tem certeza que é este o local?'), findsOneWidget);
+      await t.tap(find.text('Sim, é aqui'));
+      await esperar(t);
       expect(find.text('Vila Sônia, São Paulo - SP'), findsOneWidget);
       expect(find.text('05622-000'), findsOneWidget);
 
@@ -234,5 +262,104 @@ void main() {
       expect(d['latitude'], _vilaSonia.latitude);
       expect(d['longitude'], _vilaSonia.longitude);
     });
+  });
+
+  group('Escolher e confirmar o local', () {
+    test('busca dá preferência a lugares perto de mim', () async {
+      final s = EnderecoService(cliente: _clienteFalso());
+      final lugares = await s.buscarLugares(
+        'José Bonifácio',
+        perto: _minhaPosicao,
+      );
+      expect(lugares, hasLength(2));
+      expect(_pedidos.last.queryParameters['viewbox'], isNotNull);
+      expect(_pedidos.last.queryParameters['bounded'], '0');
+      expect(
+        lugares.last.nomeCurto,
+        'José Bonifácio, São Paulo, Região Metropolitana de São Paulo, '
+        'São Paulo, Região Sudeste',
+      );
+    });
+
+    testWidgets(
+      'Caso "Kevin": José Bonifácio mostra as opções e salva o bairro de SP',
+      (t) async {
+        final db = FakeFirebaseFirestore();
+        Fb.usar(
+          db: db,
+          auth: MockFirebaseAuth(
+            signedIn: true,
+            mockUser: MockUser(uid: 'eu', displayName: 'Pedro'),
+          ),
+        );
+        LocalizacaoService.instancia.posicao.value = _minhaPosicao;
+        addTearDown(() => LocalizacaoService.instancia.posicao.value = null);
+        t.view.physicalSize = const Size(400, 900);
+        t.view.devicePixelRatio = 1;
+        addTearDown(t.view.reset);
+        await t.pumpWidget(
+          MaterialApp(
+            theme: AppTheme.light,
+            home: CadastroPetScreen(
+              fotosIniciais: [base64Decode(_png)],
+              enderecoService: EnderecoService(cliente: _clienteFalso()),
+            ),
+          ),
+        );
+        Future<void> esperar() async {
+          for (var i = 0; i < 6; i++) {
+            await t.pump(const Duration(milliseconds: 100));
+          }
+        }
+
+        Future<void> digitar(String dica, String texto) async {
+          final campo = find.widgetWithText(TextFormField, dica);
+          await t.scrollUntilVisible(
+            campo,
+            200,
+            scrollable: find.byType(Scrollable).first,
+          );
+          await t.enterText(campo, texto);
+        }
+
+        await digitar('Ex.: Thor', 'Kevin');
+        await digitar('Coleira, manchas, cicatriz, comportamento...', 'Pardo');
+        await t.tap(find.text('Próximo'));
+        await esperar();
+        await t.tap(find.text('Próximo'));
+        await esperar();
+        await t.enterText(
+          find.widgetWithText(TextFormField, 'Ex.: Vila Sônia, São Paulo - SP'),
+          'José Bonifácio',
+        );
+        await t.tap(find.text('Próximo'));
+        await esperar();
+
+        // Duas opções com o mesmo nome
+        expect(find.text('Qual destes lugares?'), findsOneWidget);
+        // Escolhe a cidade do interior por engano e desiste
+        await t.tap(find.textContaining('São José do Rio Preto'));
+        await esperar();
+        expect(find.text('Tem certeza que é este o local?'), findsOneWidget);
+        await t.tap(find.text('Não, escolher outro'));
+        await esperar();
+        // Volta à lista e escolhe o bairro de São Paulo
+        expect(find.text('Qual destes lugares?'), findsOneWidget);
+        await t.tap(find.textContaining('Região Metropolitana'));
+        await esperar();
+        await t.tap(find.text('Sim, é aqui'));
+        await esperar();
+
+        expect(find.text('Publicar anúncio'), findsOneWidget);
+        expect(find.text('Local onde foi visto'), findsOneWidget);
+        await t.tap(find.text('Publicar anúncio'));
+        await esperar();
+        final pet = Pet.fromDocument(
+          (await db.collection('pets_perdidos').get()).docs.single,
+        );
+        expect(pet.latitude, _joseBonifacioBairro.latitude);
+        expect(pet.longitude, _joseBonifacioBairro.longitude);
+      },
+    );
   });
 }

@@ -73,17 +73,32 @@ class EnderecoService {
     );
   }
 
-  /// Converte um texto ("Vila Sônia, São Paulo - SP") em coordenadas.
-  /// Retorna null se não encontrar.
-  Future<LatLng?> buscarCoordenadas(String texto) async {
+  /// Lugares que combinam com o texto, do mais provável ao menos.
+  /// Com [perto], dá preferência a lugares próximos (ex.: o bairro
+  /// "José Bonifácio" em São Paulo, e não a cidade de mesmo nome).
+  Future<List<Lugar>> buscarLugares(
+    String texto, {
+    LatLng? perto,
+    int limite = 5,
+  }) async {
     final q = texto.replaceAll(' - ', ', ').trim();
-    if (q.isEmpty) return null;
-    final uri = Uri.https('nominatim.openstreetmap.org', '/search', {
+    if (q.isEmpty) return [];
+    final params = {
       'q': q,
       'format': 'jsonv2',
-      'limit': '1',
+      'limit': '$limite',
       'countrycodes': 'br',
-    });
+      'addressdetails': '0',
+    };
+    if (perto != null) {
+      // Caixa de ~150 km em volta: só PRIORIZA, não exclui o resto.
+      const d = 0.7;
+      params['viewbox'] =
+          '${perto.longitude - d},${perto.latitude + d},'
+          '${perto.longitude + d},${perto.latitude - d}';
+      params['bounded'] = '0';
+    }
+    final uri = Uri.https('nominatim.openstreetmap.org', '/search', params);
     final r = await _cliente
         .get(uri, headers: _cabecalhos)
         .timeout(const Duration(seconds: 12));
@@ -91,11 +106,31 @@ class EnderecoService {
       throw Exception('Busca de endereço respondeu ${r.statusCode}');
     }
     final lista = jsonDecode(utf8.decode(r.bodyBytes, allowMalformed: true));
-    if (lista is! List || lista.isEmpty) return null;
-    final lat = double.tryParse('${lista.first['lat']}');
-    final lon = double.tryParse('${lista.first['lon']}');
-    if (lat == null || lon == null) return null;
-    return LatLng(lat, lon);
+    if (lista is! List) return [];
+    final lugares = <Lugar>[];
+    for (final item in lista) {
+      if (item is! Map) continue;
+      final lat = double.tryParse('${item['lat']}');
+      final lon = double.tryParse('${item['lon']}');
+      if (lat == null || lon == null) continue;
+      final nome = (item['display_name'] ?? texto).toString();
+      // Ignora repetidos (mesmo nome a menos de 300 m).
+      final ponto = LatLng(lat, lon);
+      final repetido = lugares.any(
+        (l) =>
+            l.nomeCurto == Lugar.encurtar(nome) &&
+            const Distance().as(LengthUnit.Meter, l.ponto, ponto) < 300,
+      );
+      if (!repetido) lugares.add(Lugar(nome: nome, ponto: ponto));
+    }
+    return lugares;
+  }
+
+  /// Converte um texto ("Vila Sônia, São Paulo - SP") em coordenadas
+  /// (o resultado mais provável). Retorna null se não encontrar.
+  Future<LatLng?> buscarCoordenadas(String texto, {LatLng? perto}) async {
+    final lugares = await buscarLugares(texto, perto: perto, limite: 1);
+    return lugares.isEmpty ? null : lugares.first.ponto;
   }
 
   /// Coordenadas de um endereço de CEP: tenta do mais preciso (rua) ao
@@ -112,5 +147,28 @@ class EnderecoService {
       if (p != null) return p;
     }
     return null;
+  }
+}
+
+/// Um resultado da busca de endereço.
+class Lugar {
+  /// Nome completo, como o OpenStreetMap devolve.
+  final String nome;
+  final LatLng ponto;
+
+  const Lugar({required this.nome, required this.ponto});
+
+  /// Sem o país e o CEP no fim: "José Bonifácio, São Paulo, SP".
+  String get nomeCurto => encurtar(nome);
+
+  static String encurtar(String nome) {
+    final partes = nome
+        .split(',')
+        .map((p) => p.trim())
+        .where((p) => p.isNotEmpty)
+        .where((p) => p != 'Brasil' && !RegExp(r'^\d{5}-?\d{3}$').hasMatch(p))
+        .where((p) => !p.startsWith('Região Geográfica'))
+        .toList();
+    return partes.join(', ');
   }
 }

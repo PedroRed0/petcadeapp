@@ -8,6 +8,7 @@ import '../../core/widgets/selo_nivel.dart';
 import '../../models/nivel.dart';
 import '../../services/prestigio_service.dart';
 import '../chat/conversas_screen.dart';
+import 'casas_adocao_screen.dart';
 import 'meus_niveis_screen.dart';
 import '../../models/pet.dart';
 import '../../models/usuario.dart';
@@ -171,6 +172,13 @@ class _PerfilScreenState extends State<PerfilScreen> {
                   return n == 1 ? '1 animal' : '$n animais';
                 }(),
                 onTap: () => _abrir(const AnimaisSalvosScreen()),
+              ),
+              const SizedBox(height: 10),
+              LinhaOpcao(
+                icone: Icons.volunteer_activism_outlined,
+                titulo: 'Casas de adoção próximas',
+                subtitulo: 'Abrigos de animais perto de você',
+                onTap: () => _abrir(const CasasAdocaoScreen()),
               ),
               const SizedBox(height: 10),
               LinhaOpcao(

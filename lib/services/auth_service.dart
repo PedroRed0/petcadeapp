@@ -23,12 +23,20 @@ class AuthService {
     );
   }
 
+  /// Provedor do Google que SEMPRE mostra a escolha de conta
+  /// (sem isso, o navegador entra direto com a conta já aberta).
+  static GoogleAuthProvider get _provedorGoogle => GoogleAuthProvider()
+    ..addScope('email')
+    ..addScope('profile')
+    ..setCustomParameters({'prompt': 'select_account'});
+
   /// Entra com a conta Google. Retorna false se a pessoa cancelar.
   Future<bool> entrarComGoogle() async {
+    UserCredential? cred;
     if (kIsWeb) {
       // No navegador, o próprio Firebase abre a janela do Google.
       try {
-        await _auth.signInWithPopup(GoogleAuthProvider());
+        cred = await _auth.signInWithPopup(_provedorGoogle);
       } on FirebaseAuthException catch (e) {
         if (e.code == 'popup-closed-by-user' ||
             e.code == 'cancelled-popup-request') {
@@ -38,15 +46,15 @@ class AuthService {
             e.code == 'operation-not-supported-in-this-environment') {
           // iPhone (app na tela inicial) costuma bloquear popups:
           // abre o Google na mesma janela e volta logado.
-          await _auth.signInWithRedirect(GoogleAuthProvider());
+          await _auth.signInWithRedirect(_provedorGoogle);
           return false;
         }
         rethrow;
       }
     } else {
       try {
-        final c = await _entrarComGoogleNativo();
-        if (c == null) return false; // cancelou
+        cred = await _entrarComGoogleNativo();
+        if (cred == null) return false; // cancelou
       } on GoogleSignInException catch (e) {
         // Falta configuração (ex.: "ID do cliente da Web"): tenta pelo
         // fluxo do próprio Firebase, que abre o Google no navegador.
@@ -55,7 +63,7 @@ class AuthService {
           rethrow;
         }
         try {
-          await _auth.signInWithProvider(GoogleAuthProvider());
+          cred = await _auth.signInWithProvider(_provedorGoogle);
         } on FirebaseAuthException catch (e2) {
           if (e2.code == 'web-context-canceled' ||
               e2.code == 'canceled' ||
@@ -66,8 +74,39 @@ class AuthService {
         }
       }
     }
-    await garantirPerfil();
+    final perfil = cred.additionalUserInfo?.profile ?? const {};
+    await garantirPerfil(
+      nomeGoogle: perfil['name']?.toString(),
+      fotoGoogle: perfil['picture']?.toString(),
+    );
     return true;
+  }
+
+  /// O melhor nome disponível para o usuário logado.
+  String _melhorNome(User user, String? nomeGoogle) {
+    final candidatos = <String?>[
+      user.displayName,
+      nomeGoogle,
+      for (final p in user.providerData) p.displayName,
+    ];
+    for (final c in candidatos) {
+      if (c != null && c.trim().isNotEmpty) return c.trim();
+    }
+    // Último recurso: a parte do e-mail antes do @ ("pedro.silva").
+    final email = user.email ?? '';
+    return email.contains('@') ? email.split('@').first : '';
+  }
+
+  String _melhorFoto(User user, String? fotoGoogle) {
+    final candidatos = <String?>[
+      user.photoURL,
+      fotoGoogle,
+      for (final p in user.providerData) p.photoURL,
+    ];
+    for (final c in candidatos) {
+      if (c != null && c.trim().isNotEmpty) return c.trim();
+    }
+    return '';
   }
 
   /// Login pela tela nativa do Android/iOS (Credential Manager).
@@ -92,21 +131,41 @@ class AuthService {
   }
 
   /// Na primeira vez que alguém entra com Google, cria o perfil.
+  /// Se o perfil já existe mas ficou sem nome (aparecia "Usuário"),
+  /// completa com o nome da conta Google.
   /// (Chamado também ao abrir o app, para o login por redirecionamento.)
-  Future<void> garantirPerfil() async {
+  Future<void> garantirPerfil({String? nomeGoogle, String? fotoGoogle}) async {
     final user = _auth.currentUser;
     if (user == null) return;
+    final nome = _melhorNome(user, nomeGoogle);
+    final foto = _melhorFoto(user, fotoGoogle);
+    if ((user.displayName ?? '').trim().isEmpty && nome.isNotEmpty) {
+      try {
+        await user.updateDisplayName(nome);
+      } catch (_) {}
+    }
     final doc = Fb.db.collection('usuarios').doc(user.uid);
     final atual = await doc.get();
     if (atual.exists) {
+      final d = atual.data() ?? {};
+      final faltando = <String, dynamic>{
+        if ((d['nome']?.toString() ?? '').trim().isEmpty && nome.isNotEmpty)
+          'nome': nome,
+        if ((d['email']?.toString() ?? '').isEmpty && user.email != null)
+          'email': user.email,
+        if (!d.containsKey('fotoUrl') && foto.isNotEmpty) 'fotoUrl': foto,
+      };
+      if (faltando.isNotEmpty) {
+        await doc.set(faltando, SetOptions(merge: true));
+      }
       await PerfilService().sincronizar();
       return;
     }
     await doc.set({
-      'nome': user.displayName ?? '',
+      'nome': nome,
       'email': user.email ?? '',
       'telefone': user.phoneNumber ?? '',
-      'fotoUrl': user.photoURL ?? '',
+      'fotoUrl': foto,
       'favoritos': <String>[],
       'criadoEm': FieldValue.serverTimestamp(),
     });

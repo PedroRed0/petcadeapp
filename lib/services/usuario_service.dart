@@ -18,7 +18,21 @@ class UsuarioService {
     final id = uid;
     if (id == null) return Stream.value(null);
     return _colecao.doc(id).snapshots().map((doc) {
-      if (doc.exists) return Usuario.fromDocument(doc);
+      if (doc.exists) {
+        final u = Usuario.fromDocument(doc);
+        if (u.nome.trim().isNotEmpty) return u;
+        // Perfil sem nome (contas antigas do Google): usa o da conta.
+        final auth = Fb.auth.currentUser;
+        return Usuario(
+          uid: u.uid,
+          nome: auth?.displayName ?? '',
+          email: u.email.isNotEmpty ? u.email : (auth?.email ?? ''),
+          telefone: u.telefone,
+          favoritos: u.favoritos,
+          foto: u.foto,
+          fotoUrl: u.fotoUrl.isNotEmpty ? u.fotoUrl : (auth?.photoURL ?? ''),
+        );
+      }
       // Conta criada antes desta versão: monta com o que o Auth sabe.
       final u = Fb.auth.currentUser;
       return Usuario(

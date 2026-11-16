@@ -220,4 +220,96 @@ void main() {
       'Vila Sônia, São Paulo, São Paulo',
     );
   });
+
+  group('Casas de adoção: servidores ocupados', () {
+    http.Response jsonResp(Object o, [int status = 200]) =>
+        http.Response.bytes(utf8.encode(jsonEncode(o)), status);
+
+    final umAbrigo = {
+      'elements': [
+        {
+          'type': 'node',
+          'lat': -23.545,
+          'lon': -46.46,
+          'tags': {'amenity': 'animal_shelter', 'name': 'Casa dos Bichos'},
+        },
+      ],
+    };
+
+    test('principal recusa (429): usa o servidor reserva', () async {
+      final hosts = <String>[];
+      final c = MockClient((req) async {
+        hosts.add(req.url.host);
+        if (req.url.host == 'overpass-api.de') {
+          return http.Response('Too Many Requests', 429);
+        }
+        return jsonResp(umAbrigo);
+      });
+      final r = await AbrigoService(cliente: c).proximos(_eu);
+      expect(r.first.nome, 'Casa dos Bichos');
+      expect(hosts.first, 'overpass-api.de');
+      expect(hosts, contains('overpass.private.coffee'));
+    });
+
+    test('Overpass todo fora (504): plano B pelo Nominatim', () async {
+      final c = MockClient((req) async {
+        if (req.url.host == 'nominatim.openstreetmap.org') {
+          expect(req.url.queryParameters['bounded'], '1');
+          return jsonResp([
+            {
+              'osm_type': 'node',
+              'osm_id': 1,
+              'type': 'animal_shelter',
+              'name': 'ONG Patinhas',
+              'lat': '-23.55',
+              'lon': '-46.47',
+              'address': {'road': 'Rua A', 'suburb': 'Itaquera'},
+            },
+            {
+              // não é abrigo: ignorado
+              'osm_id': 2,
+              'type': 'veterinary',
+              'name': 'Clínica X',
+              'lat': '-23.55',
+              'lon': '-46.47',
+            },
+          ]);
+        }
+        return http.Response('Gateway Timeout', 504);
+      });
+      final r = await AbrigoService(cliente: c).proximos(_eu);
+      expect(r.map((a) => a.nome), ['ONG Patinhas']);
+      expect(r.first.endereco, 'Rua A - Itaquera');
+    });
+
+    test('tudo fora do ar: avisa "serviço indisponível"', () async {
+      final c = MockClient((req) async => http.Response('erro', 503));
+      expect(
+        () => AbrigoService(cliente: c).proximos(_eu),
+        throwsA(isA<BuscaAbrigosIndisponivel>()),
+      );
+    });
+
+    testWidgets('tela mostra "serviço ocupado" em vez de "sem internet"', (
+      t,
+    ) async {
+      LocalizacaoService.instancia.posicao.value = _eu;
+      addTearDown(() => LocalizacaoService.instancia.posicao.value = null);
+      await t.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.light,
+          home: CasasAdocaoScreen(
+            servico: AbrigoService(
+              cliente: MockClient((req) async => http.Response('erro', 504)),
+            ),
+          ),
+        ),
+      );
+      await t.tap(find.text('Buscar casas de adoção próximas'));
+      for (var i = 0; i < 8; i++) {
+        await t.pump(const Duration(milliseconds: 100));
+      }
+      expect(find.textContaining('ocupado agora'), findsOneWidget);
+    });
+  });
 }

@@ -42,6 +42,13 @@ class _CasasAdocaoScreenState extends State<CasasAdocaoScreen> {
       }
       final lista = await _servico.proximos(perto);
       if (mounted) setState(() => _abrigos = lista);
+    } on BuscaAbrigosIndisponivel {
+      if (mounted) {
+        mostrarAviso(
+          context,
+          'O serviço de mapas está ocupado agora. Tente de novo em alguns minutos.',
+        );
+      }
     } catch (e) {
       if (mounted) {
         mostrarAviso(

@@ -13,6 +13,7 @@ import 'services/firebase_refs.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  await carregarTemaSalvo();
   runApp(const PetCadeApp());
 }
 

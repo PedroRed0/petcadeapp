@@ -78,6 +78,23 @@ se o Play Protect avisar, tocar em *Mais detalhes → Instalar mesmo assim*.
 
 Para atualizar, repita o passo 1: quem já usa recebe a versão nova ao abrir.
 
+### Link e QR Code para baixar o APK
+
+O QR Code da pasta `divulgacao/` aponta para
+**https://petcade.firebaseapp.com/petcade.apk**. Para esse link funcionar,
+o APK precisa ir junto com a versão web. No PowerShell, na pasta do projeto:
+
+```bash
+flutter build apk --release --split-per-abi
+flutter build web --release
+Copy-Item build\app\outputs\flutter-apk\app-arm64-v8a-release.apk build\web\petcade.apk
+firebase deploy --only hosting
+```
+
+> A cópia tem que vir **depois** do `flutter build web`, porque ele recria a
+> pasta `build\web` e apagaria o APK. Sempre que gerar um APK novo, repita
+> os 4 comandos: o link e o QR Code continuam os mesmos.
+
 Diferenças da versão web: fotos são escolhidas pelo seletor do iPhone
 (câmera ou galeria) e a localização pede permissão ao Safari.
 

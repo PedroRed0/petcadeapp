@@ -81,22 +81,24 @@ Para atualizar, repita o passo 1: quem já usa recebe a versão nova ao abrir.
 ### Link e QR Code para baixar o APK
 
 O QR Code da pasta `divulgacao/` aponta para
-**https://petcade.firebaseapp.com/petcade.apk**. Para esse link funcionar,
-o APK precisa ir junto com a versão web. No PowerShell, na pasta do projeto:
+**https://petcade.firebaseapp.com/petcade.apk**. O plano gratuito do Firebase
+não aceita arquivos `.apk`, então esse endereço só **redireciona** (regra em
+`firebase.json`) para o APK guardado nas *Releases* do GitHub:
+`https://github.com/PedroRed0/petcadeapp/releases/latest/download/petcade.apk`
 
-```bash
-flutter build apk --release --split-per-abi
-flutter build web --release
-Copy-Item build\app\outputs\flutter-apk\app-arm64-v8a-release.apk build\web\petcade.apk
-firebase deploy --only hosting
-```
+Para publicar um APK novo:
 
-> A cópia tem que vir **depois** do `flutter build web`, porque ele recria a
-> pasta `build\web` e apagaria o APK. Sempre que gerar um APK novo, repita
-> os 4 comandos: o link e o QR Code continuam os mesmos.
+1. Gere o APK (`flutter build apk --release --split-per-abi`).
+2. Renomeie `build\app\outputs\flutter-apk\app-arm64-v8a-release.apk`
+   para **`petcade.apk`** (o nome tem que ser exatamente este).
+3. No GitHub: página do projeto → **Releases** → **Draft a new release** →
+   *Choose a tag*: digite a versão (ex.: `v1.0.3`) → *Create new tag* →
+   arraste o `petcade.apk` para a área de anexos → **Publish release**.
 
-Diferenças da versão web: fotos são escolhidas pelo seletor do iPhone
-(câmera ou galeria) e a localização pede permissão ao Safari.
+O link sempre baixa a release mais nova: o QR Code nunca muda.
+
+> Nunca coloque o `.apk` dentro de `build\web`: o deploy é recusado no plano
+> gratuito ("Executable files are forbidden on the Spark billing plan").
 
 ---
 

@@ -32,6 +32,13 @@
       "**/.*",
       "**/node_modules/**"
     ],
+    "redirects": [
+      {
+        "source": "/petcade.apk",
+        "destination": "https://github.com/PedroRed0/petcadeapp/releases/latest/download/petcade.apk",
+        "type": 302
+      }
+    ],
     "rewrites": [
       {
         "source": "**",
